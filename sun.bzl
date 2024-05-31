@@ -88,6 +88,7 @@ def define_sun():
         "drivers/interconnect/qcom/icc-bcm-voter.ko",
         "drivers/interconnect/qcom/icc-debug.ko",
         "drivers/interconnect/qcom/icc-rpmh.ko",
+        "drivers/interconnect/qcom/qnoc-kera.ko",
         "drivers/interconnect/qcom/qnoc-qos.ko",
         "drivers/interconnect/qcom/qnoc-sun.ko",
         "drivers/interconnect/qcom/qnoc-tuna.ko",
