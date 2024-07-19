@@ -183,6 +183,8 @@ def define_sun():
         "drivers/soc/qcom/minidump.ko",
         "drivers/soc/qcom/mpam/cpu_mpam.ko",
         "drivers/soc/qcom/mpam/mpam.ko",
+        "drivers/soc/qcom/mpam/mpam_msc.ko",
+        "drivers/soc/qcom/mpam/mpam_msc_slc.ko",
         "drivers/soc/qcom/mpam/platform_mpam.ko",
         "drivers/soc/qcom/msm_performance.ko",
         "drivers/soc/qcom/msm_show_epoch.ko",
