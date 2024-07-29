@@ -23,6 +23,7 @@ def define_sun():
         "drivers/clk/qcom/clk-rpmh.ko",
         "drivers/clk/qcom/debugcc-sun.ko",
         "drivers/clk/qcom/dispcc-sun.ko",
+        "drivers/clk/qcom/dispcc-tuna.ko",
         "drivers/clk/qcom/evacc-sun.ko",
         "drivers/clk/qcom/evacc-tuna.ko",
         "drivers/clk/qcom/gcc-kera.ko",
