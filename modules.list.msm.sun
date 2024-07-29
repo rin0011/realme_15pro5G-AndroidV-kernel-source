@@ -55,6 +55,7 @@ gcc-kera.ko
 gpucc-sun.ko
 secure_buffer.ko
 dispcc-sun.ko
+dispcc-tuna.ko
 camcc-sun.ko
 evacc-sun.ko
 stub-regulator.ko
