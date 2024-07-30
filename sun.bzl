@@ -16,6 +16,7 @@ def define_sun():
         "drivers/clk/clk-scmi.ko",
         "drivers/clk/qcom/cambistmclkcc-sun.ko",
         "drivers/clk/qcom/cambistmclkcc-tuna.ko",
+        "drivers/clk/qcom/camcc-kera.ko",
         "drivers/clk/qcom/camcc-sun.ko",
         "drivers/clk/qcom/camcc-tuna.ko",
         "drivers/clk/qcom/clk-dummy.ko",
