@@ -87,3 +87,4 @@ gunyah.ko
 mdt_loader.ko
 qcom-ipcc.ko
 nvmem_qfprom.ko
+cqhci-crypto-qti.ko
