@@ -20,6 +20,7 @@
 #define TIMEOUT_US		100
 #define THRESHOLD_MAX_ADC_CODE	0x3ff
 #define THRESHOLD_MIN_ADC_CODE	0x0
+#define COLD_SENSOR_HW_ID	128
 
 #define MAX_SENSORS 16
 
@@ -43,6 +44,7 @@ enum tsens_irq_type {
 	LOWER,
 	UPPER,
 	CRITICAL,
+	COLD,
 };
 
 /**
@@ -120,6 +122,7 @@ struct tsens_ops {
 	void (*disable)(struct tsens_priv *priv);
 	int (*suspend)(struct tsens_priv *priv);
 	int (*resume)(struct tsens_priv *priv);
+	int (*get_cold_status)(const struct tsens_sensor *s, bool *cold_status);
 };
 
 #define REG_FIELD_FOR_EACH_SENSOR11(_name, _offset, _startbit, _stopbit) \
@@ -555,6 +558,7 @@ enum regfield_ids {
 	TEMP_PERSIST_MIN_SENSOR_ID,
 	TEMP_PERSIST_MIN_VALID,
 
+	COLD_STATUS,		/* COLD interrupt status */
 	/* Keep last */
 	MAX_REGFIELDS
 };
@@ -580,6 +584,7 @@ struct tsens_features {
 	unsigned int adc:1;
 	unsigned int srot_split:1;
 	unsigned int has_watchdog:1;
+	unsigned int cold_int:1;
 	unsigned int max_sensors;
 	unsigned int persist_max_min:1;
 	int trip_min_temp;
@@ -633,6 +638,7 @@ struct tsens_context {
  * @ipc_log: pointer for first ipc log context id
  * @ipc_log1: pointer for second ipc log context id
  * @sensor: list of sensors attached to this device
+ * @cold_sensor: pointer to cold sensor attached to this device
  */
 struct tsens_priv {
 	struct device			*dev;
@@ -656,6 +662,7 @@ struct tsens_priv {
 	void				*ipc_log;
 	void				*ipc_log1;
 
+	struct tsens_sensor		*cold_sensor;
 	struct tsens_sensor		sensor[];
 };
 
@@ -705,6 +712,7 @@ void compute_intercept_slope(struct tsens_priv *priv, u32 *pt1, u32 *pt2, u32 mo
 int init_common(struct tsens_priv *priv);
 int get_temp_tsens_valid(const struct tsens_sensor *s, int *temp);
 int get_temp_common(const struct tsens_sensor *s, int *temp);
+int get_cold_int_status(const struct tsens_sensor *s, bool *cold_status);
 
 /* TSENS target */
 extern struct tsens_plat_data data_8960;
