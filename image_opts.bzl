@@ -27,6 +27,7 @@ def vm_image_opts(
         dtb_offset = 0x2000000,
         ramdisk_offset = 0x2100000,
         cmdline_cpio_offset = 0x2100000,
+        dummy_img_offset = 0x43FF000,
         vm_size_ext4 = 270000000,
         dummy_img_size = 4096):
     return struct(
@@ -36,6 +37,7 @@ def vm_image_opts(
         dtb_offset = dtb_offset,
         ramdisk_offset = ramdisk_offset,
         cmdline_cpio_offset = cmdline_cpio_offset,
+        dummy_img_offset = dummy_img_offset,
         vm_size_ext4 = vm_size_ext4,
         dummy_img_size = dummy_img_size,
     )
