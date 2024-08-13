@@ -1986,7 +1986,9 @@ static int q2spi_transfer_with_retries(struct q2spi_geni *q2spi, struct q2spi_re
 				goto transfer_exit;
 			}
 
-			if (i == 0 && !atomic_read(&q2spi->doorbell_pending)) {
+			if (i == 0 && !atomic_read(&q2spi->doorbell_pending) &&
+			    q2spi->is_start_seq_fail) {
+				q2spi->is_start_seq_fail = false;
 				ret = q2spi_wakeup_hw_from_sleep(q2spi);
 				if (ret) {
 					Q2SPI_DEBUG(q2spi, "%s Err q2spi_wakeup_hw_from_sleep\n",
@@ -2201,6 +2203,7 @@ static int q2spi_transfer_check(struct q2spi_geni *q2spi, struct q2spi_request *
  */
 static ssize_t q2spi_transfer(struct file *filp, const char __user *buf, size_t len, loff_t *f_pos)
 {
+	int retries = Q2SPI_SLAVE_SLEEP_WAIT_TIME;
 	struct q2spi_geni *q2spi;
 	struct q2spi_request q2spi_req;
 	struct q2spi_packet *cur_q2spi_pkt;
@@ -2218,6 +2221,14 @@ static ssize_t q2spi_transfer(struct file *filp, const char __user *buf, size_t 
 	ret = q2spi_transfer_check(q2spi, &q2spi_req, buf, len);
 	if (ret)
 		goto err;
+
+	while (retries--) {
+		/* add 2msec delay for slave to process the sleep packet */
+		if (mutex_is_locked(&q2spi->slave_sleep_lock))
+			usleep_range(100, 150);
+		else
+			break;
+	}
 
 	if (q2spi_req.cmd == HRF_WRITE) {
 		q2spi_req.addr = Q2SPI_HRF_PUSH_ADDRESS;
@@ -2261,6 +2272,7 @@ static ssize_t q2spi_transfer(struct file *filp, const char __user *buf, size_t 
 		pm_runtime_set_suspended(q2spi->dev);
 		goto err;
 	}
+	q2spi->is_start_seq_fail = false;
 	Q2SPI_DEBUG(q2spi, "%s PM after get_sync count:%d\n", __func__,
 		    atomic_read(&q2spi->dev->power.usage_count));
 	q2spi_wait_for_doorbell_setup_ready(q2spi);
@@ -4368,6 +4380,7 @@ static int q2spi_geni_probe(struct platform_device *pdev)
 	INIT_LIST_HEAD(&q2spi->tx_queue_list);
 	mutex_init(&q2spi->gsi_lock);
 	mutex_init(&q2spi->port_lock);
+	mutex_init(&q2spi->slave_sleep_lock);
 	spin_lock_init(&q2spi->txn_lock);
 	mutex_init(&q2spi->queue_lock);
 	mutex_init(&q2spi->send_msgs_lock);
@@ -4542,8 +4555,6 @@ int q2spi_wakeup_slave_through_gpio(struct q2spi_geni *q2spi)
 
 	Q2SPI_DEBUG(q2spi, "%s Sending disconnect doorbell only\n", __func__);
 	atomic_set(&q2spi->slave_in_sleep, 0);
-	geni_gsi_disconnect_doorbell_stop_ch(q2spi->gsi->tx_c, true);
-	q2spi_unmap_doorbell_rx_buf(q2spi);
 
 	ret = pinctrl_select_state(q2spi->geni_pinctrl, q2spi->geni_gpio_default);
 	if (ret) {
@@ -4582,9 +4593,10 @@ int q2spi_wakeup_slave_through_gpio(struct q2spi_geni *q2spi)
 			    __func__, ret);
 		return ret;
 	}
-	geni_gsi_ch_start(q2spi->gsi->tx_c);
-	geni_gsi_connect_doorbell(q2spi->gsi->tx_c);
-	ret = q2spi_map_doorbell_rx_buf(q2spi);
+
+	/* add necessary delay to wake up the soc */
+	usleep_range(5000, 6000);
+	gpi_q2spi_terminate_all(q2spi->gsi->tx_c);
 	return ret;
 }
 
@@ -4627,12 +4639,14 @@ int q2spi_put_slave_to_sleep(struct q2spi_geni *q2spi)
 	}
 	Q2SPI_DEBUG(q2spi, "%s q2spi_pkt:%p tid:%d\n", __func__, q2spi_pkt, q2spi_pkt->xfer->tid);
 	q2spi_pkt->is_client_sleep_pkt = true;
+	mutex_lock(&q2spi->slave_sleep_lock);
 	ret = __q2spi_transfer(q2spi, q2spi_req, q2spi_pkt, 0);
 	if (ret) {
 		Q2SPI_DEBUG(q2spi, "%s __q2spi_transfer q2spi_pkt:%p ret%d\n",
 			    __func__, q2spi_pkt, ret);
 		if (q2spi->port_release) {
 			Q2SPI_DEBUG(q2spi, "%s Err Port in closed state, return\n", __func__);
+			mutex_unlock(&q2spi->slave_sleep_lock);
 			return -ENOENT;
 		}
 	}
@@ -4643,6 +4657,7 @@ int q2spi_put_slave_to_sleep(struct q2spi_geni *q2spi)
 	atomic_set(&q2spi->slave_in_sleep, 1);
 	/* add 2msec delay for slave to process the sleep packet */
 	usleep_range(2000, 3000);
+	mutex_unlock(&q2spi->slave_sleep_lock);
 	Q2SPI_DEBUG(q2spi, "%s: PID=%d End slave_in_sleep:%d\n", __func__, current->pid,
 		    atomic_read(&q2spi->slave_in_sleep));
 err:
