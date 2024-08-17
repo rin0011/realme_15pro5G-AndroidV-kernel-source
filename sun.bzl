@@ -170,6 +170,7 @@ def define_sun():
         "drivers/soc/qcom/gic_intr_routing.ko",
         "drivers/soc/qcom/hung_task_enh.ko",
         "drivers/soc/qcom/llcc-qcom.ko",
+        "drivers/soc/qcom/llcc_heuristics.ko",
         "drivers/soc/qcom/llcc_perfmon.ko",
         "drivers/soc/qcom/mdt_loader.ko",
         "drivers/soc/qcom/mem-hooks.ko",
