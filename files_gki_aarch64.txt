@@ -4487,6 +4487,7 @@ include/trace/hooks/gzvm.h
 include/trace/hooks/hung_task.h
 include/trace/hooks/iommu.h
 include/trace/hooks/logbuf.h
+include/trace/hooks/lz4_decompress.h
 include/trace/hooks/madvise.h
 include/trace/hooks/mm.h
 include/trace/hooks/mmc.h
