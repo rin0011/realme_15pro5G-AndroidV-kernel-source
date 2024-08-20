@@ -1236,7 +1236,7 @@ int qcom_scm_assign_mem(phys_addr_t mem_addr, size_t mem_sz,
 	size_t dest_sz;
 	size_t src_sz;
 	size_t ptr_sz;
-	int next_vm;
+	u64 next_vm;
 	__le32 *src;
 	void *ptr;
 	int ret, i, b;
