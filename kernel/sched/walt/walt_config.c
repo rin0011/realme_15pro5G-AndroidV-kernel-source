@@ -13,6 +13,9 @@ cpumask_t asym_cap_sibling_cpus;
 cpumask_t pipeline_sync_cpus;
 int oscillate_period_ns;
 int soc_sched_lib_name_capacity;
+#define PIPELINE_BUSY_THRESH_8MS_WINDOW 6
+#define PIPELINE_BUSY_THRESH_12MS_WINDOW 11
+#define PIPELINE_BUSY_THRESH_16MS_WINDOW 15
 
 void walt_config(void)
 {
@@ -68,6 +71,11 @@ void walt_config(void)
 		sysctl_sched_idle_enough_clust[i] = SCHED_IDLE_ENOUGH_DEFAULT;
 		sysctl_sched_cluster_util_thres_pct_clust[i] = SCHED_CLUSTER_UTIL_THRES_PCT_DEFAULT;
 		trailblazer_floor_freq[i] = 0;
+		for (j = 0; j < MAX_CLUSTERS; j++) {
+			load_sync_util_thres[i][j] = 0;
+			load_sync_low_pct[i][j] = 0;
+			load_sync_high_pct[i][j] = 0;
+		}
 	}
 
 	for (i = 0; i < MAX_FREQ_CAP; i++) {
@@ -75,6 +83,9 @@ void walt_config(void)
 			freq_cap[i][j] = FREQ_QOS_MAX_DEFAULT_VALUE;
 	}
 
+	sysctl_sched_lrpb_active_ms[0] = PIPELINE_BUSY_THRESH_8MS_WINDOW;
+	sysctl_sched_lrpb_active_ms[1] = PIPELINE_BUSY_THRESH_12MS_WINDOW;
+	sysctl_sched_lrpb_active_ms[2] = PIPELINE_BUSY_THRESH_16MS_WINDOW;
 	soc_feat_set(SOC_ENABLE_CONSERVATIVE_BOOST_TOPAPP_BIT);
 	soc_feat_set(SOC_ENABLE_CONSERVATIVE_BOOST_FG_BIT);
 	soc_feat_set(SOC_ENABLE_UCLAMP_BOOSTED_BIT);
@@ -101,6 +112,19 @@ void walt_config(void)
 		cpumask_copy(&pipeline_sync_cpus, cpu_possible_mask);
 		soc_sched_lib_name_capacity = 2;
 		soc_feat_unset(SOC_ENABLE_PIPELINE_SWAPPING_BIT);
+
+		sysctl_cluster01_load_sync[0]	= 350;
+		sysctl_cluster01_load_sync[1]	= 100;
+		sysctl_cluster01_load_sync[2]	= 100;
+		sysctl_cluster10_load_sync[0]	= 512;
+		sysctl_cluster10_load_sync[1]	= 90;
+		sysctl_cluster10_load_sync[2]	= 90;
+		load_sync_util_thres[0][1]	= sysctl_cluster01_load_sync[0];
+		load_sync_low_pct[0][1]		= sysctl_cluster01_load_sync[1];
+		load_sync_high_pct[0][1]	= sysctl_cluster01_load_sync[2];
+		load_sync_util_thres[1][0]	= sysctl_cluster10_load_sync[0];
+		load_sync_low_pct[0][1]		= sysctl_cluster10_load_sync[1];
+		load_sync_high_pct[0][1]	= sysctl_cluster10_load_sync[2];
 	} else if (!strcmp(name, "PINEAPPLE")) {
 		soc_feat_set(SOC_ENABLE_SILVER_RT_SPREAD_BIT);
 		soc_feat_set(SOC_ENABLE_BOOST_TO_NEXT_CLUSTER_BIT);
@@ -123,6 +147,19 @@ void walt_config(void)
 			cpumask_or(&pipeline_sync_cpus,
 				&pipeline_sync_cpus, &cpu_array[0][3]);
 		}
+
+		sysctl_cluster23_load_sync[0]	= 350;
+		sysctl_cluster23_load_sync[1]	= 100;
+		sysctl_cluster23_load_sync[2]	= 100;
+		sysctl_cluster32_load_sync[0]	= 512;
+		sysctl_cluster32_load_sync[1]	= 90;
+		sysctl_cluster32_load_sync[2]	= 90;
+		load_sync_util_thres[2][3]	= sysctl_cluster23_load_sync[0];
+		load_sync_low_pct[2][3]		= sysctl_cluster23_load_sync[1];
+		load_sync_high_pct[2][3]	= sysctl_cluster23_load_sync[2];
+		load_sync_util_thres[3][2]	= sysctl_cluster32_load_sync[0];
+		load_sync_low_pct[3][2]		= sysctl_cluster32_load_sync[1];
+		load_sync_high_pct[3][2]	= sysctl_cluster32_load_sync[2];
 	}
 
 	smart_freq_init(name);

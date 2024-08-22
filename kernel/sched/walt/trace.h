@@ -464,6 +464,7 @@ TRACE_EVENT(sched_load_to_gov,
 		__field(int,	big_task_rotation)
 		__field(unsigned int, user_hint)
 		__field(unsigned int, reasons)
+		__field(u64, util)
 	),
 
 	TP_fast_assign(
@@ -483,14 +484,16 @@ TRACE_EVENT(sched_load_to_gov,
 		__entry->big_task_rotation	= big_task_rotation;
 		__entry->user_hint	= user_hint;
 		__entry->reasons	= reasons;
+		__entry->util		= scale_time_to_util(load);
 	),
 
-	TP_printk("cpu=%d policy=%d ed_task_pid=%d aggr_grp_load=%llu freq_aggr=%d tt_load=%llu rq_ps=%llu grp_rq_ps=%llu nt_ps=%llu grp_nt_ps=%llu pl=%llu load=%llu big_task_rotation=%d user_hint=%u reasons=0x%x",
+	TP_printk("cpu=%d policy=%d ed_task_pid=%d aggr_grp_load=%llu freq_aggr=%d tt_load=%llu rq_ps=%llu grp_rq_ps=%llu nt_ps=%llu grp_nt_ps=%llu pl=%llu load=%llu big_task_rotation=%d user_hint=%u reasons=0x%x util=%llu",
 		__entry->cpu, __entry->policy, __entry->ed_task_pid,
 		__entry->aggr_grp_load, __entry->freq_aggr,
 		__entry->tt_load, __entry->rq_ps, __entry->grp_rq_ps,
 		__entry->nt_ps, __entry->grp_nt_ps, __entry->pl, __entry->load,
-		__entry->big_task_rotation, __entry->user_hint, __entry->reasons)
+		__entry->big_task_rotation, __entry->user_hint, __entry->reasons,
+		__entry->util)
 );
 
 TRACE_EVENT(core_ctl_eval_need,
@@ -1935,13 +1938,14 @@ TRACE_EVENT(sched_update_busy_bitmap,
 
 	TP_PROTO(struct task_struct *p, struct rq *rq,
 		struct walt_task_struct *wts, struct walt_rq *wrq, enum task_event evt,
-		u64 wallclock, u64 next_ms_boundary),
+		u64 wallclock, u64 next_ms_boundary, int no_boost_reason),
 
-	TP_ARGS(p, rq, wts, wrq, evt, wallclock, next_ms_boundary),
+	TP_ARGS(p, rq, wts, wrq, evt, wallclock, next_ms_boundary, no_boost_reason),
 
 	TP_STRUCT__entry(
 		__array(char,		comm, TASK_COMM_LEN)
 		__field(pid_t,		pid)
+		__field(int,		on_rq)
 		__field(u64,		wallclock)
 		__field(u64,		mark_start)
 		__field(int,		rq_cpu)
@@ -1950,11 +1954,14 @@ TRACE_EVENT(sched_update_busy_bitmap,
 		__field(int,		busy_bitmap)
 		__field(u32,		period_contrib_run)
 		__field(u64,		next_ms_boundary)
+		__field(int,		no_boost_reason)
+		__field(u64,		lrb_pipeline_start_time)
 		),
 
 	TP_fast_assign(
 		memcpy(__entry->comm, p->comm, TASK_COMM_LEN);
 		__entry->pid		= p->pid;
+		__entry->on_rq		= p->on_rq;
 		__entry->wallclock	= wallclock;
 		__entry->mark_start	= wts->mark_start;
 		__entry->rq_cpu		= cpu_of(rq);
@@ -1963,14 +1970,40 @@ TRACE_EVENT(sched_update_busy_bitmap,
 		__entry->busy_bitmap = wts->busy_bitmap;
 		__entry->period_contrib_run = wts->period_contrib_run;
 		__entry->next_ms_boundary = next_ms_boundary;
+		__entry->no_boost_reason = no_boost_reason;
+		__entry->lrb_pipeline_start_time = wrq->lrb_pipeline_start_time;
 		),
 
-
-	TP_printk("pid=%d comm=%s wc=%llu ms=%llu rq_cpu=%d pipeline_cpu=%d event=%s busy_bits=0x%x period_contrib_run=%u next_ms_boundary=%llu",
-			__entry->pid, __entry->comm, __entry->wallclock,
+	TP_printk("pid=%d comm=%s on_rq=%d wc=%llu ms=%llu rq_cpu=%d pipeline_cpu=%d event=%s busy_bits=0x%x period_contrib_run=%u next_ms_boundary=%llu no_boost_reason=%d lrb_pipeline_start_time=%llu",
+			__entry->pid, __entry->comm, __entry->on_rq, __entry->wallclock,
 			__entry->mark_start, __entry->rq_cpu, __entry->pipeline_cpu,
 			task_event_names[__entry->evt],	__entry->busy_bitmap,
-			__entry->period_contrib_run, __entry->next_ms_boundary)
+			__entry->period_contrib_run, __entry->next_ms_boundary,
+			__entry->no_boost_reason, __entry->lrb_pipeline_start_time)
+);
+
+TRACE_EVENT(sched_load_sync_settings,
+
+	TP_PROTO(int cpu, unsigned long util_other, unsigned long util_prime, int mpct),
+
+	TP_ARGS(cpu, util_other, util_prime, mpct),
+
+	TP_STRUCT__entry(
+		__field(int,		cpu)
+		__field(unsigned long,	util_other)
+		__field(unsigned long,	util_prime)
+		__field(int,		mpct)
+		),
+
+	TP_fast_assign(
+		__entry->cpu		= cpu;
+		__entry->util_other	= util_other;
+		__entry->util_prime	= util_prime;
+		__entry->mpct		= mpct;
+		),
+
+	TP_printk("cpu=%d util_other=%lu util_prime=%lu mpct=%d",
+			__entry->cpu, __entry->util_other, __entry->util_prime, __entry->mpct)
 );
 
 #endif /* _TRACE_WALT_H */
