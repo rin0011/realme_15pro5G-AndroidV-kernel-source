@@ -2668,7 +2668,18 @@ void q2spi_geni_se_dump_regs(struct q2spi_geni *q2spi)
 		mutex_unlock(&q2spi->geni_resource_lock);
 		return;
 	}
+	Q2SPI_DEBUG(q2spi, "GENI_GENERAL_CFG: 0x%x\n",
+		    geni_read_reg(q2spi->base, GENI_GENERAL_CFG));
+	Q2SPI_DEBUG(q2spi, "GENI_OUTPUT_CTRL: 0x%x\n",
+		    geni_read_reg(q2spi->base, GENI_OUTPUT_CTRL));
 	Q2SPI_DEBUG(q2spi, "GENI_STATUS: 0x%x\n", geni_read_reg(q2spi->base, SE_GENI_STATUS));
+	Q2SPI_DEBUG(q2spi, "GENI_CLK_CTRL_RO: 0x%x\n",
+		    geni_read_reg(q2spi->base, GENI_CLK_CTRL_RO));
+	Q2SPI_DEBUG(q2spi, "GENI_FW_MULTILOCK_MSA_RO: 0x%x\n",
+		    geni_read_reg(q2spi->base, GENI_FW_MULTILOCK_MSA_RO));
+	Q2SPI_DEBUG(q2spi, "GENI_IF_DISABLE_RO: 0x%x\n",
+		    geni_read_reg(q2spi->base, GENI_IF_DISABLE_RO));
+	Q2SPI_DEBUG(q2spi, "SE_GENI_CLK_SEL: 0x%x\n", geni_read_reg(q2spi->base, SE_GENI_CLK_SEL));
 	Q2SPI_DEBUG(q2spi, "SPI_TRANS_CFG: 0x%x\n", geni_read_reg(q2spi->base, SE_SPI_TRANS_CFG));
 	Q2SPI_DEBUG(q2spi, "SE_GENI_IOS: 0x%x\n", geni_read_reg(q2spi->base, SE_GENI_IOS));
 	Q2SPI_DEBUG(q2spi, "SE_GENI_M_CMD0: 0x%x\n", geni_read_reg(q2spi->base, SE_GENI_M_CMD0));
@@ -2687,7 +2698,11 @@ void q2spi_geni_se_dump_regs(struct q2spi_geni *q2spi)
 	Q2SPI_DEBUG(q2spi, "DMA_TX_LEN: 0x%x\n", geni_read_reg(q2spi->base, SE_DMA_TX_LEN));
 	Q2SPI_DEBUG(q2spi, "DMA_TX_IRQ_STAT: 0x%x\n",
 		    geni_read_reg(q2spi->base, SE_DMA_TX_IRQ_STAT));
+	Q2SPI_DEBUG(q2spi, "DMA_TX_IRQ_EN: 0x%x\n",
+		    geni_read_reg(q2spi->base, SE_DMA_TX_IRQ_EN));
 	Q2SPI_DEBUG(q2spi, "DMA_TX_LEN_IN: 0x%x\n", geni_read_reg(q2spi->base, SE_DMA_TX_LEN_IN));
+	Q2SPI_DEBUG(q2spi, "DMA_RX_IRQ_EN: 0x%x\n",
+		    geni_read_reg(q2spi->base, SE_DMA_RX_IRQ_EN));
 	Q2SPI_DEBUG(q2spi, "DMA_RX_PTR_L: 0x%x\n", geni_read_reg(q2spi->base, SE_DMA_RX_PTR_L));
 	Q2SPI_DEBUG(q2spi, "DMA_RX_PTR_H: 0x%x\n", geni_read_reg(q2spi->base, SE_DMA_RX_PTR_H));
 	Q2SPI_DEBUG(q2spi, "DMA_RX_ATTR: 0x%x\n", geni_read_reg(q2spi->base, SE_DMA_RX_ATTR));
@@ -2696,6 +2711,9 @@ void q2spi_geni_se_dump_regs(struct q2spi_geni *q2spi)
 		    geni_read_reg(q2spi->base, SE_DMA_RX_IRQ_STAT));
 	Q2SPI_DEBUG(q2spi, "DMA_RX_LEN_IN: 0x%x\n", geni_read_reg(q2spi->base, SE_DMA_RX_LEN_IN));
 	Q2SPI_DEBUG(q2spi, "DMA_DEBUG_REG0: 0x%x\n", geni_read_reg(q2spi->base, SE_DMA_DEBUG_REG0));
+	Q2SPI_DEBUG(q2spi, "SE_GSI_EVENT_EN: 0x%x\n", geni_read_reg(q2spi->base, SE_GSI_EVENT_EN));
+	Q2SPI_DEBUG(q2spi, "SE_IRQ_EN: 0x%x\n", geni_read_reg(q2spi->base, SE_IRQ_EN));
+	Q2SPI_DEBUG(q2spi, "DMA_IF_EN_RO: 0x%x\n", geni_read_reg(q2spi->base, DMA_IF_EN_RO));
 	mutex_unlock(&q2spi->geni_resource_lock);
 }
 
