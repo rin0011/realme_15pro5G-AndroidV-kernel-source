@@ -175,6 +175,7 @@ def _define_kernel_dist(target, msm_target, variant):
         ":{}_images".format(target),
         ":{}_merged_kernel_uapi_headers".format(target),
         ":{}_build_config".format(target),
+        ":{}_headers".format(target),
     ]
 
     # For allyes target, keeping perf super image as common for both debug & perf variants.
