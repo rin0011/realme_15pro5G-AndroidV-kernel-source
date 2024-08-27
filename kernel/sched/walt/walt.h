@@ -730,6 +730,28 @@ static inline bool task_placement_boost_enabled(struct task_struct *p)
 	return task_sched_boost(p);
 }
 
+extern int have_heavy_list;
+extern int pipeline_nr;
+extern unsigned int sysctl_sched_pipeline_util_thres;
+static inline bool pipeline_desired(void)
+{
+	return sysctl_sched_heavy_nr || sysctl_sched_pipeline_util_thres || pipeline_nr;
+}
+
+static inline bool pipeline_in_progress(void)
+{
+	if (sched_boost_type)
+		return false;
+
+	if (pipeline_nr)
+		return true;
+
+	if ((sysctl_sched_heavy_nr || sysctl_sched_pipeline_util_thres) && have_heavy_list)
+		return true;
+
+	return false;
+}
+
 static inline enum sched_boost_policy task_boost_policy(struct task_struct *p)
 {
 	enum sched_boost_policy policy;
@@ -745,7 +767,7 @@ static inline enum sched_boost_policy task_boost_policy(struct task_struct *p)
 		 */
 		if (sched_boost_type == CONSERVATIVE_BOOST &&
 			task_util(p) <= sysctl_sched_min_task_util_for_boost &&
-			!walt_pipeline_low_latency_task(p))
+			!(pipeline_in_progress() && walt_pipeline_low_latency_task(p)))
 			policy = SCHED_BOOST_NONE;
 		if (sched_boost_type == BALANCE_BOOST &&
 			task_util(p) <= sysctl_sched_min_task_util_for_boost)
@@ -1418,16 +1440,13 @@ static inline void walt_lockdep_assert(int cond, int cpu, struct task_struct *p)
 
 extern void pipeline_check(struct walt_rq *wrq);
 extern bool enable_load_sync(int cpu);
-extern unsigned int enable_pipeline_boost;
 extern struct walt_related_thread_group *lookup_related_thread_group(unsigned int group_id);
 extern bool prev_is_sbt;
 extern unsigned int sysctl_sched_pipeline_special;
 extern struct task_struct *pipeline_special_task;
 extern void remove_special_task(void);
 extern void set_special_task(struct task_struct *pipeline_special_local);
-extern unsigned int sysctl_sched_pipeline_util_thres;
 #define MAX_NR_PIPELINE 3
-extern int pipeline_nr;
 /* smart freq */
 #define SMART_FREQ_LEGACY_TUPLE_SIZE		3
 #define SMART_FREQ_IPC_TUPLE_SIZE		3
@@ -1465,9 +1484,11 @@ extern u8 contiguous_yielding_windows;
 extern unsigned int sysctl_sched_lrpb_active_ms[NUM_PIPELINE_BUSY_THRES];
 #define NUM_LOAD_SYNC_SETTINGS 3
 extern unsigned int sysctl_cluster01_load_sync[NUM_LOAD_SYNC_SETTINGS];
+extern unsigned int sysctl_cluster01_load_sync_60fps[NUM_LOAD_SYNC_SETTINGS];
 extern unsigned int sysctl_cluster02_load_sync[NUM_LOAD_SYNC_SETTINGS];
 extern unsigned int sysctl_cluster03_load_sync[NUM_LOAD_SYNC_SETTINGS];
 extern unsigned int sysctl_cluster10_load_sync[NUM_LOAD_SYNC_SETTINGS];
+extern unsigned int sysctl_cluster10_load_sync_60fps[NUM_LOAD_SYNC_SETTINGS];
 extern unsigned int sysctl_cluster12_load_sync[NUM_LOAD_SYNC_SETTINGS];
 extern unsigned int sysctl_cluster13_load_sync[NUM_LOAD_SYNC_SETTINGS];
 extern unsigned int sysctl_cluster20_load_sync[NUM_LOAD_SYNC_SETTINGS];
@@ -1477,6 +1498,9 @@ extern unsigned int sysctl_cluster30_load_sync[NUM_LOAD_SYNC_SETTINGS];
 extern unsigned int sysctl_cluster31_load_sync[NUM_LOAD_SYNC_SETTINGS];
 extern unsigned int sysctl_cluster32_load_sync[NUM_LOAD_SYNC_SETTINGS];
 extern unsigned int load_sync_util_thres[MAX_CLUSTERS][MAX_CLUSTERS];
+extern unsigned int load_sync_util_thres_60fps[MAX_CLUSTERS][MAX_CLUSTERS];
 extern unsigned int load_sync_low_pct[MAX_CLUSTERS][MAX_CLUSTERS];
+extern unsigned int load_sync_low_pct_60fps[MAX_CLUSTERS][MAX_CLUSTERS];
 extern unsigned int load_sync_high_pct[MAX_CLUSTERS][MAX_CLUSTERS];
+extern unsigned int load_sync_high_pct_60fps[MAX_CLUSTERS][MAX_CLUSTERS];
 #endif /* _WALT_H */

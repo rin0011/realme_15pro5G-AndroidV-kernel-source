@@ -659,7 +659,7 @@ should_apply_suh_freq_boost(struct walt_sched_cluster *cluster)
 	return is_cluster_hosting_top_app(cluster);
 }
 
-static inline u64 freq_policy_load(struct rq *rq, unsigned int *reason)
+static inline u64 freq_policy_load(struct rq *rq, unsigned int *reason, bool trace)
 {
 	struct walt_rq *wrq = &per_cpu(walt_rq, cpu_of(rq));
 	struct walt_sched_cluster *cluster = wrq->cluster;
@@ -718,7 +718,8 @@ static inline u64 freq_policy_load(struct rq *rq, unsigned int *reason)
 		*reason = CPUFREQ_REASON_TRAILBLAZER_CPU_BIT;
 	}
 
-	trace_sched_load_to_gov(rq, aggr_grp_load, tt_load, sched_freq_aggr_en,
+	if (trace)
+		trace_sched_load_to_gov(rq, aggr_grp_load, tt_load, sched_freq_aggr_en,
 				load, 0, walt_rotation_enabled,
 				sysctl_sched_user_hint, wrq, *reason);
 	return load;
@@ -727,14 +728,14 @@ static inline u64 freq_policy_load(struct rq *rq, unsigned int *reason)
 static bool rtgb_active;
 
 static inline unsigned long
-__cpu_util_freq_walt(int cpu, struct walt_cpu_load *walt_load, unsigned int *reason)
+__cpu_util_freq_walt(int cpu, struct walt_cpu_load *walt_load, unsigned int *reason, bool trace)
 {
 	u64 util;
 	struct rq *rq = cpu_rq(cpu);
 	unsigned long capacity = capacity_orig_of(cpu);
 	struct walt_rq *wrq = &per_cpu(walt_rq, cpu_of(rq));
 
-	util = scale_time_to_util(freq_policy_load(rq, reason));
+	util = scale_time_to_util(freq_policy_load(rq, reason, trace));
 
 	/*
 	 * util is on a scale of 0 to 1024.  this is the utilization
@@ -772,6 +773,18 @@ int other_sync_pct(unsigned long util_other)
 {
 	int pct;
 
+	if (sched_ravg_window >= SCHED_RAVG_16MS_WINDOW) {
+		if (util_other <=
+			load_sync_util_thres_60fps[num_sched_clusters - 2][num_sched_clusters - 1])
+			pct =
+			load_sync_low_pct_60fps[num_sched_clusters - 2][num_sched_clusters - 1];
+		else
+			pct =
+			load_sync_high_pct_60fps[num_sched_clusters - 2][num_sched_clusters - 1];
+
+		return pct;
+	}
+
 	if (util_other <= load_sync_util_thres[num_sched_clusters - 2][num_sched_clusters - 1])
 		pct = load_sync_low_pct[num_sched_clusters - 2][num_sched_clusters - 1];
 	else
@@ -783,6 +796,18 @@ int other_sync_pct(unsigned long util_other)
 int prime_sync_pct(unsigned long util_prime)
 {
 	int pct;
+
+	if (sched_ravg_window >= SCHED_RAVG_16MS_WINDOW) {
+		if (util_prime <=
+			load_sync_util_thres_60fps[num_sched_clusters - 1][num_sched_clusters - 2])
+			pct =
+			load_sync_low_pct_60fps[num_sched_clusters - 1][num_sched_clusters - 2];
+		else
+			pct =
+			load_sync_high_pct_60fps[num_sched_clusters - 1][num_sched_clusters - 2];
+
+		return pct;
+	}
 
 	if (util_prime <= load_sync_util_thres[num_sched_clusters - 1][num_sched_clusters - 2])
 		pct = load_sync_low_pct[num_sched_clusters - 1][num_sched_clusters - 2];
@@ -803,18 +828,18 @@ cpu_util_freq_walt(int cpu, struct walt_cpu_load *walt_load, unsigned int *reaso
 	unsigned long max_nl_other = 0, max_pl_other = 0;
 	unsigned long max_nl_prime = 0, max_pl_prime = 0;
 
-	util =  __cpu_util_freq_walt(cpu, walt_load, reason);
+	util =  __cpu_util_freq_walt(cpu, walt_load, reason, true);
 
 	if (enable_load_sync(cpu)) {
 		for_each_cpu(i, &pipeline_sync_cpus) {
 			if (cpumask_test_cpu(i, &cpu_array[0][num_sched_clusters-1])) {
 				util_prime = max(util_prime,
-						__cpu_util_freq_walt(i, &wl_prime, reason));
+						__cpu_util_freq_walt(i, &wl_prime, reason, false));
 				max_nl_prime = max(max_nl_prime, wl_prime.nl);
 				max_pl_prime = max(max_pl_prime, wl_prime.pl);
 			} else {
 				util_other = max(util_other,
-						__cpu_util_freq_walt(i, &wl_other, reason));
+						__cpu_util_freq_walt(i, &wl_other, reason, false));
 				max_nl_other = max(max_nl_other, wl_other.nl);
 				max_pl_other = max(max_pl_other, wl_other.pl);
 			}
@@ -844,7 +869,8 @@ cpu_util_freq_walt(int cpu, struct walt_cpu_load *walt_load, unsigned int *reaso
 
 	for_each_cpu(i, &asym_cap_sibling_cpus) {
 		if (i != cpu) {
-			util_other = max(util_other, __cpu_util_freq_walt(i, &wl_other, reason));
+			util_other = max(util_other,
+					__cpu_util_freq_walt(i, &wl_other, reason, false));
 			max_nl_other = max(max_nl_other, wl_other.nl);
 			max_pl_other = max(max_pl_other, wl_other.pl);
 		}
@@ -1716,7 +1742,7 @@ static inline u64 scale_exec_time(u64 delta, struct rq *rq, struct walt_task_str
 
 	delta = (delta * wrq->task_exec_scale) >> SCHED_CAPACITY_SHIFT;
 
-	if (wts->load_boost && wts->grp && wts->grp->skip_min)
+	if (wts->load_boost && wts->grp)
 		delta = (delta * (1024 + wts->boosted_task_load) >> 10);
 
 	return delta;
@@ -2571,6 +2597,9 @@ static void update_busy_bitmap(struct task_struct *p, struct rq *rq, int event,
 	 */
 	if (wallclock > wrq->lrb_pipeline_start_time + 4000000)
 		wrq->lrb_pipeline_start_time = 0;
+
+	if (!pipeline_in_progress())
+		return;
 
 	/*
 	 * Figure out whether pipeline_cpu, cpu_of(rq) are both same or if it
@@ -4377,8 +4406,7 @@ static void walt_irq_work(struct irq_work *irq_work)
 		if (cpumask_empty(&lock_cpus))
 			return;
 
-		if (cpumask_intersects(&lock_cpus, &pipeline_sync_cpus) &&
-				enable_pipeline_boost) {
+		if (pipeline_in_progress() && cpumask_intersects(&lock_cpus, &pipeline_sync_cpus)) {
 			cpumask_or(&lock_cpus, &lock_cpus, &pipeline_sync_cpus);
 			is_pipeline_sync_migration = true;
 		}
