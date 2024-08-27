@@ -158,7 +158,9 @@ enum smart_freq_legacy_reason {
 	BIG_TASKCNT_SMART_FREQ,
 	TRAILBLAZER_SMART_FREQ,
 	SBT_SMART_FREQ,
-	PIPELINE_SMART_FREQ,
+	PIPELINE_60FPS_OR_LESSER_SMART_FREQ,
+	PIPELINE_90FPS_SMART_FREQ,
+	PIPELINE_120FPS_OR_GREATER_SMART_FREQ,
 	THERMAL_ROTATION_SMART_FREQ,
 	LEGACY_SMART_FREQ,
 };
@@ -1464,8 +1466,9 @@ extern unsigned int sysctl_ipc_freq_levels_cluster3[SMART_FMAX_IPC_MAX];
 extern int sched_smart_freq_ipc_handler(struct ctl_table *table, int write,
 				      void __user *buffer, size_t *lenp,
 				      loff_t *ppos);
-extern unsigned int sysctl_sched_legacy_smart_freq_hyst_cpu_ns[WALT_NR_CPUS];
-extern unsigned int sysctl_sched_legacy_smart_freq_hyst_enable_cpus;
+
+extern u8 smart_freq_legacy_reason_hyst_ms[LEGACY_SMART_FREQ][WALT_NR_CPUS];
+extern void update_smart_freq_legacy_reason_hyst_time(struct walt_sched_cluster *cluster);
 
 /* frequent yielder */
 #define MAX_YIELD_CNT_PER_TASK_THR		25
