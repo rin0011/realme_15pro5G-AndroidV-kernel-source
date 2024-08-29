@@ -650,6 +650,7 @@ drivers/android/binder_pick_impl.c
 drivers/android/binder_pick_impl.h
 drivers/android/binder_trace.h
 drivers/android/binderfs.c
+drivers/android/dbitmap.h
 drivers/android/debug_kinfo.c
 drivers/android/debug_kinfo.h
 drivers/android/vendor_hooks.c
@@ -4478,6 +4479,7 @@ include/trace/hooks/fault.h
 include/trace/hooks/fips140.h
 include/trace/hooks/fpsimd.h
 include/trace/hooks/fs.h
+include/trace/hooks/fsnotify.h
 include/trace/hooks/ftrace_dump.h
 include/trace/hooks/fuse.h
 include/trace/hooks/futex.h
@@ -4493,6 +4495,7 @@ include/trace/hooks/mm.h
 include/trace/hooks/mmc.h
 include/trace/hooks/mpam.h
 include/trace/hooks/net.h
+include/trace/hooks/perf.h
 include/trace/hooks/power.h
 include/trace/hooks/preemptirq.h
 include/trace/hooks/printk.h
@@ -5803,6 +5806,7 @@ mm/mmu_notifier.c
 mm/mmzone.c
 mm/mprotect.c
 mm/mremap.c
+mm/mseal.c
 mm/msync.c
 mm/oom_kill.c
 mm/page-writeback.c
