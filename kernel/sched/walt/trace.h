@@ -745,8 +745,8 @@ TRACE_EVENT(waltgov_util_update,
 	    TP_PROTO(int cpu,
 		     unsigned long util, unsigned long avg_cap,
 		     unsigned long max_cap, unsigned long nl, unsigned long pl,
-		     unsigned int rtgb, unsigned int flags),
-	    TP_ARGS(cpu, util, avg_cap, max_cap, nl, pl, rtgb, flags),
+		     unsigned int rtgb, unsigned int flags, int boost),
+	    TP_ARGS(cpu, util, avg_cap, max_cap, nl, pl, rtgb, flags, boost),
 	    TP_STRUCT__entry(
 		    __field(int, cpu)
 		    __field(unsigned long, util)
@@ -756,6 +756,7 @@ TRACE_EVENT(waltgov_util_update,
 		    __field(unsigned long, pl)
 		    __field(unsigned int, rtgb)
 		    __field(unsigned int, flags)
+		    __field(int, boost)
 	    ),
 	    TP_fast_assign(
 		    __entry->cpu	= cpu;
@@ -766,11 +767,13 @@ TRACE_EVENT(waltgov_util_update,
 		    __entry->pl		= pl;
 		    __entry->rtgb	= rtgb;
 		    __entry->flags	= flags;
+		    __entry->boost	= boost;
 	    ),
-	    TP_printk("cpu=%d util=%lu avg_cap=%lu max_cap=%lu nl=%lu pl=%lu rtgb=%u flags=0x%x",
+	    TP_printk("cpu=%d util=%lu avg_cap=%lu max_cap=%lu nl=%lu pl=%lu rtgb=%u flags=0x%x boost_to_apply=%d",
 		      __entry->cpu, __entry->util, __entry->avg_cap,
 		      __entry->max_cap, __entry->nl,
-		      __entry->pl, __entry->rtgb, __entry->flags)
+		      __entry->pl, __entry->rtgb, __entry->flags,
+		      __entry->boost)
 );
 
 TRACE_EVENT(waltgov_next_freq,
@@ -1778,9 +1781,9 @@ TRACE_EVENT(sched_update_updown_early_migrate_values,
 
 TRACE_EVENT(sched_pipeline_tasks,
 
-	TP_PROTO(int type, int index, struct walt_task_struct *heavy_wts, int nr),
+	TP_PROTO(int type, int index, struct walt_task_struct *heavy_wts, int nr, u32 total_util),
 
-	TP_ARGS(type, index, heavy_wts, nr),
+	TP_ARGS(type, index, heavy_wts, nr, total_util),
 
 	TP_STRUCT__entry(
 		__field(int, index)
@@ -1793,6 +1796,8 @@ TRACE_EVENT(sched_pipeline_tasks,
 		__field(int, low_latency)
 		__field(int, nr)
 		__field(int, special_pid)
+		__field(unsigned int, util_thres)
+		__field(u32, total_util)
 	),
 
 	TP_fast_assign(
@@ -1806,13 +1811,15 @@ TRACE_EVENT(sched_pipeline_tasks,
 		__entry->low_latency	= heavy_wts->low_latency;
 		__entry->nr		= nr;
 		__entry->special_pid	= pipeline_special_task ? pipeline_special_task->pid : -1;
+		__entry->util_thres	= sysctl_sched_pipeline_util_thres;
+		__entry->total_util	= total_util;
 	),
 
-	TP_printk("type=%d index=%d pid=%d comm=(%s) demand=%d coloc_demand=%d pipeline_cpu=%d low_latency=0x%x nr_pipeline=%d special_pid=%d",
+	TP_printk("type=%d index=%d pid=%d comm=%s demand=%d coloc_demand=%d pipeline_cpu=%d low_latency=0x%x nr_pipeline=%d special_pid=%d util_thres=%u total_util=%u",
 			__entry->type, __entry->index, __entry->pid,
 			__entry->comm, __entry->demand_scaled, __entry->coloc_demand,
 			__entry->pipeline_cpu, __entry->low_latency, __entry->nr,
-			__entry->special_pid)
+			__entry->special_pid, __entry->util_thres, __entry->total_util)
 );
 
 TRACE_EVENT(sched_pipeline_swapped,
