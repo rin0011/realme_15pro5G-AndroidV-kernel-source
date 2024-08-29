@@ -131,6 +131,12 @@ def _define_kernel_build(
     out_list.remove("Image.lz4")
     out_list.remove("Image.gz")
 
+    out_list.extend([
+        "scripts/sign-file",
+        "certs/signing_key.pem",
+        "certs/signing_key.x509",
+    ])
+
     kernel_build(
         name = target,
         module_outs = in_tree_module_list,
@@ -178,6 +184,8 @@ def _define_kernel_dist(target, msm_target, variant):
         ":{}_merged_kernel_uapi_headers".format(target),
         ":{}_build_config".format(target),
         ":{}_headers".format(target),
+        ":signing_key",
+        ":verity_key",
     ]
 
     # For allyes target, keeping perf super image as common for both debug & perf variants.
@@ -202,6 +210,7 @@ def _define_kernel_dist(target, msm_target, variant):
             "**/Image": "755",
             "**/*.dtb*": "755",
             "**/LinuxLoader*": "755",
+            "**/sign-file": "755",
             "**/*": "644",
         },
         log = "info",
