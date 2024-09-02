@@ -24,8 +24,6 @@ def define_monaco():
         "drivers/dma/qcom/bam_dma.ko",
         "drivers/dma/qcom/msm_gpi.ko",
         "drivers/firmware/qcom-scm.ko",
-        "drivers/firmware/qcom/si_core/mem_object.ko",
-        "drivers/firmware/qcom/si_core/si_core_module.ko",
         "drivers/hwspinlock/qcom_hwspinlock.ko",
         "drivers/hwtracing/coresight/coresight.ko",
         "drivers/hwtracing/coresight/coresight-csr.ko",
