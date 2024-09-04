@@ -659,7 +659,7 @@ should_apply_suh_freq_boost(struct walt_sched_cluster *cluster)
 	return is_cluster_hosting_top_app(cluster);
 }
 
-static inline u64 freq_policy_load(struct rq *rq, unsigned int *reason, bool trace)
+static inline u64 freq_policy_load(struct rq *rq, unsigned int *reason)
 {
 	struct walt_rq *wrq = &per_cpu(walt_rq, cpu_of(rq));
 	struct walt_sched_cluster *cluster = wrq->cluster;
@@ -718,8 +718,7 @@ static inline u64 freq_policy_load(struct rq *rq, unsigned int *reason, bool tra
 		*reason = CPUFREQ_REASON_TRAILBLAZER_CPU_BIT;
 	}
 
-	if (trace)
-		trace_sched_load_to_gov(rq, aggr_grp_load, tt_load, sched_freq_aggr_en,
+	trace_sched_load_to_gov(rq, aggr_grp_load, tt_load, sched_freq_aggr_en,
 				load, 0, walt_rotation_enabled,
 				sysctl_sched_user_hint, wrq, *reason);
 	return load;
@@ -728,14 +727,14 @@ static inline u64 freq_policy_load(struct rq *rq, unsigned int *reason, bool tra
 static bool rtgb_active;
 
 static inline unsigned long
-__cpu_util_freq_walt(int cpu, struct walt_cpu_load *walt_load, unsigned int *reason, bool trace)
+__cpu_util_freq_walt(int cpu, struct walt_cpu_load *walt_load, unsigned int *reason)
 {
 	u64 util;
 	struct rq *rq = cpu_rq(cpu);
 	unsigned long capacity = capacity_orig_of(cpu);
 	struct walt_rq *wrq = &per_cpu(walt_rq, cpu_of(rq));
 
-	util = scale_time_to_util(freq_policy_load(rq, reason, trace));
+	util = scale_time_to_util(freq_policy_load(rq, reason));
 
 	/*
 	 * util is on a scale of 0 to 1024.  this is the utilization
@@ -804,18 +803,18 @@ cpu_util_freq_walt(int cpu, struct walt_cpu_load *walt_load, unsigned int *reaso
 	unsigned long max_nl_other = 0, max_pl_other = 0;
 	unsigned long max_nl_prime = 0, max_pl_prime = 0;
 
-	util =  __cpu_util_freq_walt(cpu, walt_load, reason, true);
+	util =  __cpu_util_freq_walt(cpu, walt_load, reason);
 
 	if (enable_load_sync(cpu)) {
 		for_each_cpu(i, &pipeline_sync_cpus) {
 			if (cpumask_test_cpu(i, &cpu_array[0][num_sched_clusters-1])) {
 				util_prime = max(util_prime,
-						__cpu_util_freq_walt(i, &wl_prime, reason, false));
+						__cpu_util_freq_walt(i, &wl_prime, reason));
 				max_nl_prime = max(max_nl_prime, wl_prime.nl);
 				max_pl_prime = max(max_pl_prime, wl_prime.pl);
 			} else {
 				util_other = max(util_other,
-						__cpu_util_freq_walt(i, &wl_other, reason, false));
+						__cpu_util_freq_walt(i, &wl_other, reason));
 				max_nl_other = max(max_nl_other, wl_other.nl);
 				max_pl_other = max(max_pl_other, wl_other.pl);
 			}
@@ -845,8 +844,7 @@ cpu_util_freq_walt(int cpu, struct walt_cpu_load *walt_load, unsigned int *reaso
 
 	for_each_cpu(i, &asym_cap_sibling_cpus) {
 		if (i != cpu) {
-			util_other = max(util_other,
-					__cpu_util_freq_walt(i, &wl_other, reason, false));
+			util_other = max(util_other, __cpu_util_freq_walt(i, &wl_other, reason));
 			max_nl_other = max(max_nl_other, wl_other.nl);
 			max_pl_other = max(max_pl_other, wl_other.pl);
 		}
