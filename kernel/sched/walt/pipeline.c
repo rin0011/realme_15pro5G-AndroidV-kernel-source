@@ -192,8 +192,7 @@ bool find_heaviest_topapp(u64 window_start)
 
 	/* lazy enabling disabling until 100mS for colocation or heavy_nr change */
 	grp = lookup_related_thread_group(DEFAULT_CGROUP_COLOC_ID);
-	if (!grp || (!sysctl_sched_heavy_nr && !sysctl_sched_pipeline_util_thres) ||
-		sched_boost_type) {
+	if (!grp || (!sysctl_sched_heavy_nr && !sysctl_sched_pipeline_util_thres)) {
 		if (have_heavy_list) {
 			raw_spin_lock_irqsave(&heavy_lock, flags);
 			for (i = 0; i < MAX_NR_PIPELINE; i++) {
@@ -518,7 +517,7 @@ void rearrange_pipeline_preferred_cpus(u64 window_start)
 		goto out;
 
 	raw_spin_lock_irqsave(&pipeline_lock, flags);
-	if (!pipeline_nr || sched_boost_type)
+	if (pipeline_nr == 0)
 		goto release_lock;
 
 	found_pipeline = true;
@@ -620,9 +619,6 @@ void pipeline_check(struct walt_rq *wrq)
 bool enable_load_sync(int cpu)
 {
 	if (!cpumask_test_cpu(cpu, &pipeline_sync_cpus))
-		return false;
-
-	if (!pipeline_in_progress())
 		return false;
 
 	if (!enable_pipeline_boost)
