@@ -101,7 +101,6 @@ struct lpm_cluster {
 	bool predicted;
 	bool initialized;
 	bool is_timer_expired;
-	bool is_timer_queued;
 	bool use_bias_timer;
 };
 
