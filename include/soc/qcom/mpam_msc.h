@@ -44,7 +44,6 @@ struct qcom_mpam_msc {
 	const struct qcom_scmi_vendor_ops *scmi_ops;
 	struct scmi_protocol_handle *ph;
 	struct device *dev;
-	void __iomem *mon_base;
 	struct list_head node;
 } __packed;
 
@@ -54,7 +53,6 @@ struct mpam_msc_ops {
 	int (*get_cache_partition_capability)(struct device *dev, void *msc_partid, void *msc_partconfig);
 	int (*reset_cache_partition)(struct device *dev, void *msc_partid, void *msc_partconfig);
 	int (*mon_config)(struct device *dev, void *msc_partid, void *msc_partconfig);
-	int (*mon_stats_read)(struct device *dev, void *msc_partid, void *mon_val);
 };
 
 struct qcom_mpam_msc *qcom_msc_lookup(uint32_t msc_id);
@@ -62,9 +60,6 @@ int msc_system_get_device_capability(uint32_t msc_id, void *arg1, void *arg2);
 int msc_system_get_partition(uint32_t msc_id, void *arg1, void *arg2);
 int msc_system_set_partition(uint32_t msc_id, void *arg1, void *arg2);
 int msc_system_reset_partition(uint32_t msc_id, void *arg1, void *arg2);
-int msc_system_mon_read_miss_info(uint32_t msc_id, void *arg1, void *arg2);
-int msc_system_mon_alloc_info(uint32_t msc_id, void *arg1, void *arg2);
-int msc_system_mon_config(uint32_t msc_id, void *arg1, void *arg2);
 int attach_dev(struct device *dev, struct qcom_mpam_msc *qcom_msc, uint32_t msc_type);
 void detach_dev(struct device *dev, struct qcom_mpam_msc *qcom_msc, uint32_t msc_type);
 #endif /* _QCOM_MPAM_MSC_H */
