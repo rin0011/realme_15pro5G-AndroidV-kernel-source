@@ -192,12 +192,7 @@ def define_monaco():
         "lib/test_user_copy.ko",
     ]
 
-    kernel_vendor_cmdline_extras = [
-        # do not sort
-        "console=ttyMSM0,115200n8",
-        "qcom_geni_serial.con_enabled=1",
-        "bootconfig",
-    ]
+    kernel_vendor_cmdline_extras = ["bootconfig"]
 
     for variant in la_variants:
         board_kernel_cmdline_extras = []
@@ -205,11 +200,22 @@ def define_monaco():
 
         if variant == "consolidate":
             mod_list = _monaco_consolidate_in_tree_modules
+            board_bootconfig_extras += ["androidboot.serialconsole=1"]
+            board_kernel_cmdline_extras += [
+                # do not sort
+                "console=ttyMSM0,115200n8",
+                "earlycon",
+            ]
+            kernel_vendor_cmdline_extras += [
+                # do not sort
+                "console=ttyMSM0,115200n8",
+                "earlycon",
+            ]
         else:
             mod_list = _monaco_in_tree_modules
-            board_kernel_cmdline_extras += ["nosoftlockup"]
-            kernel_vendor_cmdline_extras += ["nosoftlockup"]
-            board_bootconfig_extras += ["androidboot.console=0"]
+            board_kernel_cmdline_extras += ["nosoftlockup console=ttynull"]
+            kernel_vendor_cmdline_extras += ["nosoftlockup console=ttynull"]
+            board_bootconfig_extras += ["androidboot.serialconsole=0"]
 
         define_msm_la(
             msm_target = target_name,
