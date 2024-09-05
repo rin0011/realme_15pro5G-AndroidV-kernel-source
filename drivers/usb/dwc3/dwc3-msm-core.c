@@ -642,6 +642,7 @@ struct dwc3_msm {
 	int			repeater_rev;
 
 	u32			cap_length;
+	bool			sleep_clk_bcr;
 };
 
 #define USB_HSPHY_3P3_VOL_MIN		3050000 /* uV */
@@ -4291,6 +4292,13 @@ static int dwc3_msm_resume(struct dwc3_msm *mdwc)
 		if (ret)
 			dev_err(mdwc->dev, "%s:core_reset deassert failed\n",
 					__func__);
+		if (mdwc->sleep_clk_bcr) {
+			/* In case of some targets, sleep_clk is used for demets which is
+			 * used for USB BCR. As sleep clk is a slow clk which runs at 32khz,
+			 * additional delay is required for deassert for the same.
+			 */
+			usleep_range(200, 250);
+		}
 	}
 
 	ret = dwc3_clk_enable_disable(mdwc, true, mdwc->lpm_flags & MDWC3_POWER_COLLAPSE);
@@ -6302,6 +6310,8 @@ static int dwc3_msm_probe(struct platform_device *pdev)
 	if (ret < 0)
 		goto err;
 
+	mdwc->sleep_clk_bcr = of_property_read_bool(node, "qcom,sleep-clk-bcr");
+
 	if (dma_set_mask_and_coherent(dev, DMA_BIT_MASK(64))) {
 		dev_err(&pdev->dev, "setting DMA mask to 64 failed.\n");
 		if (dma_set_mask_and_coherent(dev, DMA_BIT_MASK(32))) {
@@ -7107,6 +7117,7 @@ static void dwc3_otg_sm_work(struct work_struct *w)
 		if (ret < 0) {
 			dev_err(mdwc->dev, "%s: pm_runtime_resume_and_get failed\n", __func__);
 			pm_runtime_set_suspended(mdwc->dev);
+			pm_runtime_disable(mdwc->dev);
 			break;
 		}
 		ret = dwc3_msm_core_init(mdwc);

@@ -3941,8 +3941,10 @@ static void msm_geni_serial_flush(struct uart_port *uport)
 {
 	struct msm_geni_serial_port *port = GET_DEV_PORT(uport);
 
-	atomic_set(&port->flush_buffers, 1);
-	msm_geni_serial_stop_tx(uport);
+	if (port->ioctl_count) {
+		atomic_set(&port->flush_buffers, 1);
+		msm_geni_serial_stop_tx(uport);
+	}
 }
 
 static void msm_geni_serial_shutdown(struct uart_port *uport)
@@ -4045,6 +4047,7 @@ static void msm_geni_serial_shutdown(struct uart_port *uport)
 					if (device_pending_suspend(uport)) {
 						UART_LOG_DBG(msm_port->ipc_log_pwr, uport->dev,
 							     "%s Uport Suspended\n", __func__);
+						ret = 0;
 						break;
 					}
 					j++;
