@@ -202,6 +202,7 @@ def define_parrot():
         "drivers/thermal/qcom/qti_devfreq_cdev.ko",
         "drivers/thermal/qcom/qti_qmi_cdev.ko",
         "drivers/thermal/qcom/qti_qmi_sensor_v2.ko",
+        "drivers/thermal/qcom/qti_thermal_vendor_hooks.ko",
         "drivers/thermal/qcom/qti_userspace_cdev.ko",
         "drivers/thermal/qcom/sdpm_clk.ko",
         "drivers/thermal/qcom/thermal_config.ko",
