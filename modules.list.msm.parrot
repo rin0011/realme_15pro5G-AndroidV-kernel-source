@@ -18,6 +18,7 @@ qcom_wdt_core.ko
 qcom_cpucp.ko
 qcom_ipc_logging.ko
 qcom-pdc.ko
+qti_thermal_vendor_hooks.ko
 qcom_tsens.ko
 thermal_pause.ko
 cpu_hotplug.ko
