@@ -267,9 +267,7 @@ class BazelBuilder:
                 extra_options=self.user_opts,
                 bazel_target_opts=["--dist_dir", out_dir]
             )
-
-            self.write_opts(out_dir, self.user_opts, "build_opts.txt")
-            self.write_opts(out_dir, [self.bazel_cache],"output_opts.txt")
+            self.write_opts(out_dir)
 
     def run_menuconfig(self):
         """Run menuconfig on all target-variant combos class is initialized with"""
@@ -278,10 +276,10 @@ class BazelBuilder:
             menuconfig_target = [Target(self.workspace, t, v, menuconfig_label, self.out_dir)]
             self.bazel("run", menuconfig_target, bazel_target_opts=["menuconfig"])
 
-    def write_opts(self, out_dir, opt, filename):
-        with open(os.path.join(out_dir, filename), "w") as opt_file:
-            if opt:
-                opt_file.write("{}".format("\n".join(opt)))
+    def write_opts(self, out_dir):
+        with open(os.path.join(out_dir, "build_opts.txt"), "w") as opt_file:
+            if self.user_opts:
+                opt_file.write("{}".format("\n".join(self.user_opts)))
             opt_file.write("\n")
 
     def build(self):
