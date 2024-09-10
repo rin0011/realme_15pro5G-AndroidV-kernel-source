@@ -161,8 +161,6 @@ def define_monaco():
         "drivers/thermal/qcom/thermal_config.ko",
         "drivers/thermal/qcom/thermal_pause.ko",
         "drivers/tty/serial/msm_geni_serial.ko",
-        "drivers/ufs/host/ufs-qcom.ko",
-        "drivers/ufs/host/ufshcd-crypto-qti.ko",
         "drivers/uio/msm_sharedmem/msm_sharedmem.ko",
         "drivers/usb/dwc3/dwc3-msm.ko",
         "drivers/usb/gadget/function/f_fs_ipc_log.ko",
