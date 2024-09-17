@@ -450,8 +450,9 @@ static int msm_hsphy_init(struct usb_phy *uphy)
 				qcom_scm_io_writel(phy->eud_reg, 0x0);
 				phy->re_enable_eud = true;
 			} else {
-				ret = msm_hsphy_enable_power(phy, true);
-				return ret;
+				msm_hsphy_enable_power(phy, true);
+				msm_hsphy_enable_clocks(phy, true);
+				return 0;
 			}
 		}
 	}
