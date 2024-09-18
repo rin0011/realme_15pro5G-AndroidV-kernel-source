@@ -1453,13 +1453,13 @@ config SM_GCC_KERA
 	  USB, SD/UFS, PCIe etc.
 
 config SM_CAMCC_TUNA
-        tristate "TUNA Camera Clock Controller"
-        depends on SM_GCC_TUNA
-        help
-          Support for the camera clock controller on Qualcomm Technologies, Inc
-          Tuna devices.
-          Say Y if you want to support camera devices and functionality such as
-          capturing pictures.
+	tristate "TUNA Camera Clock Controller"
+	depends on SM_GCC_TUNA
+	help
+	  Support for the camera clock controller on Qualcomm Technologies, Inc
+	  Tuna devices.
+	  Say Y if you want to support camera devices and functionality such as
+	  capturing pictures.
 
 config SM_CAMBISTMCLKCC_TUNA
 	tristate "TUNA CAMBISTMCLK Clock Controller"
@@ -1469,5 +1469,14 @@ config SM_CAMBISTMCLKCC_TUNA
 	  Inc Tuna devices.
 	  Say Y if you want to support camera devices for a better low-latency
 	  clock.
+
+config SM_DISPCC_TUNA
+	tristate "TUNA Display Clock Controller"
+	depends on SM_GCC_TUNA
+	help
+	  Support for the display clock controller on Qualcomm Technologies, Inc
+	  Tuna devices.
+	  Say Y if you want to support display devices and functionality such as
+	  splash screen.
 
 endif
