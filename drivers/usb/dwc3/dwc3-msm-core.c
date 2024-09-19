@@ -6372,7 +6372,8 @@ static int dwc3_msm_probe(struct platform_device *pdev)
 		}
 	}
 
-	if (dwc3_msm_check_extcon_prop(pdev))
+	ret = dwc3_msm_check_extcon_prop(pdev);
+	if (ret)
 		goto put_dwc3;
 
 
