@@ -642,6 +642,7 @@ suspend:
 		}
 		phy->suspended = true;
 	} else { /* Bus resume and cable connect */
+		msm_hsphy_enable_power(phy, true);
 		msm_hsphy_enable_clocks(phy, true);
 		phy->suspended = false;
 	}
