@@ -1479,4 +1479,22 @@ config SM_DISPCC_TUNA
 	  Say Y if you want to support display devices and functionality such as
 	  splash screen.
 
+config SM_DEBUGCC_TUNA
+	tristate "Tuna Debug Clock Controller"
+	depends on COMMON_CLK_QCOM
+	help
+	  Support for the debug clock controller on Qualcomm Technologies, Inc
+	  Sun devices.
+	  Say Y if you want to support the debug clocks such as clock
+	  measurement functionality.
+
+config SM_CAMCC_KERA
+	tristate "KERA Camera Clock Controller"
+	depends on SM_GCC_KERA
+	help
+	  Support for the camera clock controller on Qualcomm Technologies, Inc
+	  Kera devices.
+	  Say Y if you want to support camera devices and functionality such as
+	  capturing pictures.
+
 endif
