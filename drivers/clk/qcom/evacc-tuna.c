@@ -413,6 +413,8 @@ MODULE_DEVICE_TABLE(of, eva_cc_tuna_match_table);
 
 static int eva_cc_tuna_probe(struct platform_device *pdev)
 {
+	unsigned int dly_accu_mask = 0xf << 21;
+	unsigned int dly_accu_val = 0xd << 21;
 	struct regmap *regmap;
 	int ret;
 
@@ -439,6 +441,10 @@ static int eva_cc_tuna_probe(struct platform_device *pdev)
 	regmap_update_bits(regmap, 0x80a4, BIT(0), BIT(0));
 	regmap_update_bits(regmap, 0x80f8, BIT(0), BIT(0));
 	regmap_update_bits(regmap, 0x80d4, BIT(0), BIT(0));
+
+	/* Change DLY_ACCU_RED_SHIFTER_DONE to d'13 for mvs0, mvs0c */
+	regmap_update_bits(regmap, 0x8074, dly_accu_mask, dly_accu_val);
+	regmap_update_bits(regmap, 0x8040, dly_accu_mask, dly_accu_val);
 
 	ret = qcom_cc_really_probe(pdev, &eva_cc_tuna_desc, regmap);
 	if (ret) {
