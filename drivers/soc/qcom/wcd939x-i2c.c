@@ -968,9 +968,11 @@ static void wcd_usbss_pd_pu_enable(void)
 	regmap_update_bits(wcd_usbss_ctxt_->regmap, WCD_USBSS_DP_BIAS, 0x01, 0x01);
 	regmap_update_bits(wcd_usbss_ctxt_->regmap, WCD_USBSS_DN_BIAS, 0x01, 0x01);
 
-	/* Enable SBU1/2 2K PLDN */
-	regmap_update_bits(wcd_usbss_ctxt_->regmap, WCD_USBSS_MG1_BIAS, 0x01, 0x01);
-	regmap_update_bits(wcd_usbss_ctxt_->regmap, WCD_USBSS_MG2_BIAS, 0x01, 0x01);
+	if (!wcd_usbss_ctxt_->usb_sbu_compliance) {
+		/* Enable SBU1/2 2K PLDN */
+		regmap_update_bits(wcd_usbss_ctxt_->regmap, WCD_USBSS_MG1_BIAS, 0x01, 0x01);
+		regmap_update_bits(wcd_usbss_ctxt_->regmap, WCD_USBSS_MG2_BIAS, 0x01, 0x01);
+	}
 }
 
 /* to use with DPDM switch selection */
@@ -1301,31 +1303,22 @@ int wcd_usbss_switch_update(enum wcd_usbss_cable_types ctype,
 			if (wcd_usbss_ctxt_->version == WCD_USBSS_2_0)
 				regmap_update_bits(wcd_usbss_ctxt_->regmap,
 						WCD_USBSS_PMP_OUT1, 0x40, 0x40);
-			/* for GND MIC Swap, change mode to FSM */
-			audio_fsm_mode = WCD_USBSS_AUDIO_FSM;
-			/* Disable all switches */
+
+			/* Disable MIC switch */
 			regmap_update_bits(wcd_usbss_ctxt_->regmap,
-					WCD_USBSS_SWITCH_SETTINGS_ENABLE, 0x7F, 0x00);
-			/* Select L, R, GSBU1, MG2 */
-			regmap_update_bits(wcd_usbss_ctxt_->regmap,
-					WCD_USBSS_SWITCH_SELECT0, 0x3F, 0x01);
+					WCD_USBSS_SWITCH_SETTINGS_ENABLE, 0x02, 0x00);
 			/* Disable OVP_MG1_BIAS PCOMP_DYN_BST_EN */
 			regmap_update_bits(wcd_usbss_ctxt_->regmap,
 					WCD_USBSS_MG1_BIAS, 0x08, 0x00);
-			/* Enable SENSE, MIC switches */
-			regmap_update_bits(wcd_usbss_ctxt_->regmap,
-					WCD_USBSS_SWITCH_SETTINGS_ENABLE, 0x06, 0x06);
 			/* Select MG1 for AGND_SWITCHES */
 			regmap_update_bits(wcd_usbss_ctxt_->regmap,
 					WCD_USBSS_SWITCH_SELECT1, 0x01, 0x00);
-			/* Enable AGND switches */
+			/* Select L, R, GSBU1, MG2 */
 			regmap_update_bits(wcd_usbss_ctxt_->regmap,
-					WCD_USBSS_SWITCH_SETTINGS_ENABLE, 0x01, 0x01);
-			/* Enable DPR, DNL */
+					WCD_USBSS_SWITCH_SELECT0, 0x3F, 0x01);
+			/* Enable MIC switch */
 			regmap_update_bits(wcd_usbss_ctxt_->regmap,
-					WCD_USBSS_SWITCH_SETTINGS_ENABLE, 0x18, 0x18);
-			regmap_update_bits_base(wcd_usbss_ctxt_->regmap,
-					WCD_USBSS_AUDIO_FSM_START, 0x01, 0x01, NULL, false, true);
+					WCD_USBSS_SWITCH_SETTINGS_ENABLE, 0x02, 0x02);
 			break;
 		case WCD_USBSS_HSJ_CONNECT:
 			/* Update power mode to mode 1 for AATC */
@@ -1565,9 +1558,11 @@ static int wcd_usbss_sdam_handle_events_locked(int req_state)
 		regmap_update_bits(priv->regmap, WCD_USBSS_DP_BIAS, 0x01, 0x01);
 		regmap_update_bits(priv->regmap, WCD_USBSS_DN_BIAS, 0x01, 0x01);
 
-		/* Enable SBU1/2 2K PLDN */
-		regmap_update_bits(priv->regmap, WCD_USBSS_MG1_BIAS, 0x01, 0x01);
-		regmap_update_bits(priv->regmap, WCD_USBSS_MG2_BIAS, 0x01, 0x01);
+		if (!wcd_usbss_ctxt_->usb_sbu_compliance) {
+			/* Enable SBU1/2 2K PLDN */
+			regmap_update_bits(priv->regmap, WCD_USBSS_MG1_BIAS, 0x01, 0x01);
+			regmap_update_bits(priv->regmap, WCD_USBSS_MG2_BIAS, 0x01, 0x01);
+		}
 		/* Disconnect D+/D- switch */
 		wcd_usbss_dpdm_switch_update_from_handler(false, false);
 
@@ -1597,9 +1592,11 @@ static int wcd_usbss_sdam_handle_events_locked(int req_state)
 		/* Disable D+/D- 1M & 400K PLDN */
 		regmap_update_bits(priv->regmap, WCD_USBSS_BIAS_TOP, 0x20, 0x20);
 
-		/* Disable SBU1/2 2K PLDN */
-		regmap_update_bits(priv->regmap, WCD_USBSS_MG1_BIAS, 0x01, 0x00);
-		regmap_update_bits(priv->regmap, WCD_USBSS_MG2_BIAS, 0x01, 0x00);
+		if (!wcd_usbss_ctxt_->usb_sbu_compliance) {
+			/* Disable SBU1/2 2K PLDN */
+			regmap_update_bits(priv->regmap, WCD_USBSS_MG1_BIAS, 0x01, 0x00);
+			regmap_update_bits(priv->regmap, WCD_USBSS_MG2_BIAS, 0x01, 0x00);
+		}
 		/* USB Mode : Connect D+/D- switch */
 		wcd_usbss_dpdm_switch_connect(priv, true);
 
@@ -1614,9 +1611,11 @@ static int wcd_usbss_sdam_handle_events_locked(int req_state)
 		regmap_update_bits(priv->regmap, WCD_USBSS_DP_BIAS, 0x01, 0x01);
 		regmap_update_bits(priv->regmap, WCD_USBSS_DN_BIAS, 0x01, 0x01);
 
-		/* Enable SBU1/2 2K PLDN */
-		regmap_update_bits(priv->regmap, WCD_USBSS_MG1_BIAS, 0x01, 0x01);
-		regmap_update_bits(priv->regmap, WCD_USBSS_MG2_BIAS, 0x01, 0x01);
+		if (!wcd_usbss_ctxt_->usb_sbu_compliance) {
+			/* Enable SBU1/2 2K PLDN */
+			regmap_update_bits(priv->regmap, WCD_USBSS_MG1_BIAS, 0x01, 0x01);
+			regmap_update_bits(priv->regmap, WCD_USBSS_MG2_BIAS, 0x01, 0x01);
+		}
 
 		/* Connect D+/D- switch */
 		wcd_usbss_dpdm_switch_connect(priv, true);
@@ -1792,6 +1791,18 @@ static int wcd_usbss_probe(struct i2c_client *i2c)
 
 		dev_err(priv->dev, "Failed to initialize regmap: %d\n", rc);
 		goto err_data;
+	}
+	if (of_find_property(i2c->dev.of_node, "wcd-usb-sbu-compliance", NULL)) {
+		dev_dbg(priv->dev, "disabling SBU pulldowns for USB compliance\n");
+		priv->usb_sbu_compliance = true;
+		/*
+		 * external zener diode installed,
+		 * disable OVP protections on SBUx. SBUx pull-downs are disabled.
+		 * This is needed for USB compliance requirement (related to
+		 * impedance) on SBUx
+		 */
+		regmap_update_bits(priv->regmap, WCD_USBSS_MG1_BIAS, 0x01, 0x00);
+		regmap_update_bits(priv->regmap, WCD_USBSS_MG2_BIAS, 0x01, 0x00);
 	}
 
 	/* OVP-Fuse settings recommended from HW */

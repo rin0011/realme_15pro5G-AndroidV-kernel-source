@@ -1913,15 +1913,6 @@ static int __q2spi_transfer(struct q2spi_geni *q2spi, struct q2spi_request q2spi
 			}
 			return -ETIMEDOUT;
 		}
-		Q2SPI_DEBUG(q2spi, "%s q2spi_pkt:%p bulk_wait completed wait DB clear\n",
-			    __func__, q2spi_pkt);
-		timeout = wait_event_interruptible(q2spi->read_wq,
-						   !atomic_read(&q2spi->doorbell_pending));
-		if (timeout) {
-			Q2SPI_DEBUG(q2spi, "%s: %p Err db pending interrupted\n",
-				    __func__, q2spi_pkt);
-			return 0;
-		}
 	} else if (q2spi_req.cmd == LOCAL_REG_READ) {
 		if (copy_to_user(q2spi_req.data_buff, q2spi_pkt->xfer->rx_buf,
 				 q2spi_req.data_len)) {
@@ -2267,7 +2258,9 @@ static ssize_t q2spi_transfer(struct file *filp, const char __user *buf, size_t 
 		pm_runtime_set_suspended(q2spi->dev);
 		goto err;
 	}
+
 	q2spi->is_start_seq_fail = false;
+	reinit_completion(&q2spi->wait_comp_start_fail);
 	Q2SPI_DEBUG(q2spi, "%s PM after get_sync count:%d\n", __func__,
 		    atomic_read(&q2spi->dev->power.usage_count));
 	q2spi_wait_for_doorbell_setup_ready(q2spi);
@@ -2286,6 +2279,7 @@ static ssize_t q2spi_transfer(struct file *filp, const char __user *buf, size_t 
 		ret = -ENOMEM;
 		goto err;
 	}
+
 	Q2SPI_DEBUG(q2spi, "%s flow_id:%d\n", __func__, flow_id);
 	ret = q2spi_transfer_with_retries(q2spi, q2spi_req, cur_q2spi_pkt, len, flow_id, user_buf);
 	Q2SPI_DEBUG(q2spi, "%s transfer_with_retries ret:%d\n", __func__, ret);
@@ -2722,6 +2716,7 @@ static irqreturn_t q2spi_geni_wakeup_isr(int irq, void *data)
 	struct q2spi_geni *q2spi = data;
 
 	Q2SPI_DEBUG(q2spi, "%s PID:%d\n", __func__, current->pid);
+	irq_set_irq_type(q2spi->doorbell_irq, IRQ_TYPE_EDGE_RISING);
 	atomic_set(&q2spi->slave_in_sleep, 0);
 	schedule_work(&q2spi->q2spi_wakeup_work);
 	return IRQ_HANDLED;
@@ -4196,7 +4191,7 @@ static int q2spi_sleep_config(struct q2spi_geni *q2spi, struct platform_device *
 	Q2SPI_DEBUG(q2spi, "%s Q2SPI doorbell_irq:%d\n", __func__, q2spi->doorbell_irq);
 	irq_set_status_flags(q2spi->doorbell_irq, IRQ_NOAUTOEN);
 	ret = devm_request_irq(q2spi->dev, q2spi->doorbell_irq,
-			       q2spi_geni_wakeup_isr, IRQF_TRIGGER_RISING | IRQF_ONESHOT,
+			       q2spi_geni_wakeup_isr, IRQF_TRIGGER_HIGH | IRQF_ONESHOT,
 			       "doorbell_wakeup", q2spi);
 	if (unlikely(ret)) {
 		Q2SPI_ERROR(q2spi, "%s:Failed to get WakeIRQ ret%d\n", __func__, ret);
@@ -4421,6 +4416,7 @@ static int q2spi_geni_probe(struct platform_device *pdev)
 	atomic_set(&q2spi->sma_rd_pending, 0);
 	init_completion(&q2spi->sma_wr_comp);
 	init_completion(&q2spi->sma_rd_comp);
+	init_completion(&q2spi->wait_comp_start_fail);
 
 	/* Pre allocate buffers for transfers */
 	ret = q2spi_pre_alloc_buffers(q2spi);
@@ -4723,6 +4719,7 @@ static int q2spi_geni_runtime_suspend(struct device *dev)
 		q2spi_unmap_doorbell_rx_buf(q2spi);
 		Q2SPI_DEBUG(q2spi, "%s Sending disconnect doorbell cmd\n", __func__);
 		geni_gsi_disconnect_doorbell_stop_ch(q2spi->gsi->tx_c, true);
+		irq_set_irq_type(q2spi->doorbell_irq, IRQ_TYPE_LEVEL_HIGH);
 		ret = irq_set_irq_wake(q2spi->doorbell_irq, 1);
 		if (unlikely(ret))
 			Q2SPI_DEBUG(q2spi, "%s Err Failed to set IRQ wake\n", __func__);

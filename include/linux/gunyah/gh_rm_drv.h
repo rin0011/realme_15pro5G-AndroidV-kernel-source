@@ -74,10 +74,6 @@
 
 #define MAX_EXIT_REASON_SIZE			4
 
-struct gh_rm_mem_shared_acl_entry;
-struct gh_rm_mem_shared_sgl_entry;
-struct gh_rm_mem_shared_attr_entry;
-
 struct gh_rm_notif_mem_shared_payload {
 	u32 mem_handle;
 	u8 mem_type;
@@ -91,20 +87,11 @@ struct gh_rm_notif_mem_shared_payload {
 	/* TODO: How to arrange multiple variable length struct arrays? */
 } __packed;
 
-struct gh_rm_mem_shared_acl_entry {
-	u16 acl_vmid;
-	u8 acl_rights;
-	u8 reserved;
-} __packed;
-
-struct gh_rm_mem_shared_sgl_entry {
-	u32 sgl_size_low;
-	u32 sgl_size_high;
-} __packed;
-
-struct gh_rm_mem_shared_attr_entry {
-	u16 attributes;
-	u16 attributes_vmid;
+/* Compared with gh_sgl_desc, ipa_base field is not present */
+struct gh_rm_notif_mem_shared_sgl_desc {
+	u16 n_sgl_entries;
+	u16 reserved;
+	u64 size[];
 } __packed;
 
 struct gh_rm_notif_mem_released_payload {
@@ -586,6 +573,11 @@ static inline int ghd_rm_vm_reset(gh_vmid_t vmid)
 
 /* Client APIs for VM query */
 static inline int gh_rm_populate_hyp_res(gh_vmid_t vmid, const char *vm_name)
+{
+	return -EINVAL;
+}
+
+static inline int gh_rm_unpopulate_hyp_res(gh_vmid_t vmid, const char *vm_name)
 {
 	return -EINVAL;
 }
