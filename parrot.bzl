@@ -229,6 +229,7 @@ def define_parrot():
         "drivers/usb/phy/phy-msm-ssusb-qmp.ko",
         "drivers/usb/phy/phy-qcom-emu.ko",
         "drivers/usb/typec/ucsi/ucsi_qti_glink.ko",
+        "drivers/video/backlight/qcom-spmi-wled.ko",
         "drivers/virt/gunyah/gh_ctrl.ko",
         "drivers/virt/gunyah/gh_dbl.ko",
         "drivers/virt/gunyah/gh_irq_lend.ko",
