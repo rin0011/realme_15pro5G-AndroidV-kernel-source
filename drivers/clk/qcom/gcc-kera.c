@@ -1927,10 +1927,11 @@ static struct clk_branch gcc_gpu_gemnoc_gfx_clk = {
 };
 
 static struct clk_branch gcc_gpu_gpll0_cph_clk_src = {
-	.halt_check = BRANCH_HALT_DELAY,
+	.halt_reg = 0x71150,
+	.halt_check = BRANCH_HALT_ENABLE_VOTED,
 	.clkr = {
-		.enable_reg = 0x52000,
-		.enable_mask = BIT(15),
+		.enable_reg = 0x71150,
+		.enable_mask = BIT(0),
 		.hw.init = &(const struct clk_init_data) {
 			.name = "gcc_gpu_gpll0_cph_clk_src",
 			.parent_hws = (const struct clk_hw*[]) {
@@ -1944,10 +1945,11 @@ static struct clk_branch gcc_gpu_gpll0_cph_clk_src = {
 };
 
 static struct clk_branch gcc_gpu_gpll0_div_cph_clk_src = {
-	.halt_check = BRANCH_HALT_DELAY,
+	.halt_reg = 0x71154,
+	.halt_check = BRANCH_HALT_ENABLE_VOTED,
 	.clkr = {
-		.enable_reg = 0x52000,
-		.enable_mask = BIT(16),
+		.enable_reg = 0x71154,
+		.enable_mask = BIT(0),
 		.hw.init = &(const struct clk_init_data) {
 			.name = "gcc_gpu_gpll0_div_cph_clk_src",
 			.parent_hws = (const struct clk_hw*[]) {
