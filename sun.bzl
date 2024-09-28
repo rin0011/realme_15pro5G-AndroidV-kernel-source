@@ -227,7 +227,6 @@ def define_sun():
         "drivers/soc/qcom/qsee_ipc_irq_bridge.ko",
         "drivers/soc/qcom/qti_battery_debug.ko",
         "drivers/soc/qcom/qti_dmof_scmi.ko",
-        "drivers/soc/qcom/qti_fctl_scmi.ko",
         "drivers/soc/qcom/qti_pmic_glink.ko",
         "drivers/soc/qcom/secure_buffer.ko",
         "drivers/soc/qcom/smem.ko",
