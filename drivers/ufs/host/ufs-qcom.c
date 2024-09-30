@@ -437,6 +437,7 @@ static inline void cancel_dwork_unvote_cpufreq(struct ufs_hba *hba)
 
 	cancel_delayed_work_sync(&host->fwork);
 #if IS_ENABLED(CONFIG_SCHED_WALT)
+	walt_unset_enforce_high_irq_cpus(&host->esi_mask);
 	sched_set_boost(STORAGE_BOOST_DISABLE);
 #endif
 
@@ -1787,10 +1788,20 @@ static void ufs_qcom_toggle_pri_affinity(struct ufs_hba *hba, bool on)
 		return;
 
 #if IS_ENABLED(CONFIG_SCHED_WALT)
-	if (on)
+
+	if (on) {
+		/* Enforcing high irq cpus is needed for high IO load
+		 * condition, Single door bell which doesn't used
+		 * ESI doesn't need it.
+		 */
+		if (host->esi_mask.bits[0])
+			walt_set_enforce_high_irq_cpus(&host->esi_mask);
 		sched_set_boost(STORAGE_BOOST);
-	else
+	} else {
+		if (host->esi_mask.bits[0])
+			walt_unset_enforce_high_irq_cpus(&host->esi_mask);
 		sched_set_boost(STORAGE_BOOST_DISABLE);
+	}
 #endif
 
 	atomic_set(&host->hi_pri_en, on);
@@ -3116,7 +3127,7 @@ static void ufs_qcom_parse_irq_affinity(struct ufs_hba *hba)
 	struct device *dev = hba->dev;
 	struct device_node *np = dev->of_node;
 	struct ufs_qcom_host *host = ufshcd_get_variant(hba);
-	int mask = 0;
+	int mask = 0, i;
 	int num_cqs = 0;
 
 	/*
@@ -3164,6 +3175,10 @@ static void ufs_qcom_parse_irq_affinity(struct ufs_hba *hba)
 	/* If device includes perf mask, enable dynamic irq affinity feature */
 	if (host->perf_mask.bits[0])
 		host->irq_affinity_support = true;
+
+	/* Populate esi mask */
+	for (i = 0; i < num_cqs; i++)
+		cpumask_set_cpu(host->esi_affinity_mask[i], &host->esi_mask);
 }
 
 /* ufs_qcom_storage_boost_param_init - Init Storage boost param */
