@@ -57,6 +57,7 @@ secure_buffer.ko
 dispcc-sun.ko
 dispcc-tuna.ko
 camcc-sun.ko
+camcc-tuna.ko
 evacc-sun.ko
 stub-regulator.ko
 tcsrcc-sun.ko
@@ -102,6 +103,7 @@ gunyah_platform_hooks.ko
 gunyah_qcom.ko
 mdt_loader.ko
 cambistmclkcc-sun.ko
+cambistmclkcc-tuna.ko
 videocc-sun.ko
 clk-rpmh.ko
 crm-v2.ko
