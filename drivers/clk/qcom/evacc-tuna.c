@@ -432,6 +432,7 @@ static int eva_cc_tuna_probe(struct platform_device *pdev)
 
 	clk_lucid_ole_pll_configure(&eva_cc_pll0, regmap, &eva_cc_pll0_config);
 
+	regmap_update_bits(regmap, 0x9f24, BIT(0), BIT(0));
 	/*
 	 * Keep clocks always enabled:
 	 *	eva_cc_ahb_clk
