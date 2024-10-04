@@ -144,6 +144,7 @@ def define_parrot():
         "drivers/soc/qcom/dmesg_dumper.ko",
         "drivers/soc/qcom/eud.ko",
         "drivers/soc/qcom/fsa4480-i2c.ko",
+        "drivers/soc/qcom/gh_tlmm_vm_mem_access.ko",
         "drivers/soc/qcom/gic_intr_routing.ko",
         "drivers/soc/qcom/hung_task_enh.ko",
         "drivers/soc/qcom/mdt_loader.ko",
