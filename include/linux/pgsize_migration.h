@@ -14,6 +14,7 @@
  */
 
 #include <linux/mm.h>
+#include <linux/pgsize_migration_inline.h>
 #include <linux/seq_file.h>
 #include <linux/sizes.h>
 
@@ -65,9 +66,6 @@ extern void show_map_pad_vma(struct vm_area_struct *vma,
 extern void split_pad_vma(struct vm_area_struct *vma, struct vm_area_struct *new,
 			  unsigned long addr, int new_below);
 
-extern unsigned long vma_pad_fixup_flags(struct vm_area_struct *vma,
-					 unsigned long newflags);
-
 extern bool is_mergable_pad_vma(struct vm_area_struct *vma,
 				unsigned long vm_flags);
 
@@ -107,12 +105,6 @@ static inline void show_map_pad_vma(struct vm_area_struct *vma,
 static inline void split_pad_vma(struct vm_area_struct *vma, struct vm_area_struct *new,
 				 unsigned long addr, int new_below)
 {
-}
-
-static inline unsigned long vma_pad_fixup_flags(struct vm_area_struct *vma,
-						unsigned long newflags)
-{
-	return newflags;
 }
 
 static inline bool is_mergable_pad_vma(struct vm_area_struct *vma,
