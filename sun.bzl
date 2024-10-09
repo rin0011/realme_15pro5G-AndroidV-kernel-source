@@ -99,6 +99,7 @@ def define_sun():
         "drivers/irqchip/msm_show_resume_irq.ko",
         "drivers/irqchip/qcom-pdc.ko",
         "drivers/leds/flash/leds-qcom-flash.ko",
+        "drivers/leds/leds-qpnp-vibrator-ldo.ko",
         "drivers/leds/leds-qti-flash.ko",
         "drivers/leds/rgb/leds-qcom-lpg.ko",
         "drivers/mailbox/msm_qmp.ko",
