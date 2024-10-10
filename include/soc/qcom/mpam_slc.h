@@ -6,36 +6,10 @@
 #ifndef _QCOM_MPAM_SLC_H
 #define _QCOM_MPAM_SLC_H
 
+#define MAX_NUM_GEARS		3
 #define MAX_PART_ID		10
 #define SLC_INVALID_PARTID      ((1 << 16) - 1)
 #define SLC_NUM_PARTIDS		5
-
-enum slc_clients_id {
-	APPS,
-	GPU,
-	NSP,
-	SLC_CLIENT_MAX,
-};
-
-enum gear_val {
-	GEAR_VERY_HIGH,
-	GEAR_HIGH,
-	GEAR_MID,
-	GEAR_LOW,
-	GEAR_BYPASS,
-	GEAR_MAX,
-};
-
-static char gear_index[][25] = {
-	"SLC_GEAR_VERY_HIGH",
-	"SLC_GEAR_HIGH",
-	"SLC_GEAR_MID",
-	"SLC_GEAR_LOW",
-	"SLC_GEAR_BYPASS",
-	"",
-};
-
-#define MAX_NUM_GEARS	GEAR_MAX
 
 /* slc Monitor capability */
 struct slc_mon_capability {
@@ -169,5 +143,26 @@ struct qcom_msc_slc_mon_val {
 	struct qcom_slc_mon_data_val data[SLC_NUM_PARTIDS];
 	uint64_t last_capture_time;
 } __packed;
+
+enum slc_clients_id {
+	APPS,
+	GPU,
+	NSP,
+	SLC_CLIENT_MAX,
+};
+
+enum gear_val {
+	GEAR_HIGH,
+	GEAR_LOW,
+	GEAR_BYPASS,
+	GEAR_MAX,
+};
+
+static char gear_index[][25] = {
+	"SLC_GEAR_HIGH",
+	"SLC_GEAR_LOW",
+	"SLC_GEAR_BYPASS",
+	"",
+};
 
 #endif /* _QCOM_MPAM_SLC_H */
