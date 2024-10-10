@@ -524,10 +524,7 @@ enum tuna_functions {
 	msm_mux_RESOUT_GPIO_N,
 	msm_mux_SDC2_CLK,
 	msm_mux_SDC2_CMD,
-	msm_mux_SDC2_DATA0,
-	msm_mux_SDC2_DATA1,
-	msm_mux_SDC2_DATA2,
-	msm_mux_SDC2_DATA3,
+	msm_mux_SDC2_DATA,
 	msm_mux_SDC2_FB_CLK,
 	msm_mux_aoss_cti,
 	msm_mux_atest_char0,
@@ -828,16 +825,10 @@ static const char *const SDC2_CLK_groups[] = {
 static const char *const SDC2_CMD_groups[] = {
 	"gpio51",
 };
-static const char *const SDC2_DATA0_groups[] = {
+static const char *const SDC2_DATA_groups[] = {
 	"gpio63",
-};
-static const char *const SDC2_DATA1_groups[] = {
 	"gpio120",
-};
-static const char *const SDC2_DATA2_groups[] = {
 	"gpio48",
-};
-static const char *const SDC2_DATA3_groups[] = {
 	"gpio49",
 };
 static const char *const SDC2_FB_CLK_groups[] = {
@@ -1605,10 +1596,7 @@ static const struct pinfunction tuna_functions[] = {
 	MSM_PIN_FUNCTION(RESOUT_GPIO_N),
 	MSM_PIN_FUNCTION(SDC2_CLK),
 	MSM_PIN_FUNCTION(SDC2_CMD),
-	MSM_PIN_FUNCTION(SDC2_DATA0),
-	MSM_PIN_FUNCTION(SDC2_DATA1),
-	MSM_PIN_FUNCTION(SDC2_DATA2),
-	MSM_PIN_FUNCTION(SDC2_DATA3),
+	MSM_PIN_FUNCTION(SDC2_DATA),
 	MSM_PIN_FUNCTION(SDC2_FB_CLK),
 	MSM_PIN_FUNCTION(aoss_cti),
 	MSM_PIN_FUNCTION(atest_char0),
@@ -1966,9 +1954,9 @@ static const struct msm_pingroup tuna_groups[] = {
 			NA, NA, NA, 0, -1),
 	[47] = PINGROUP(47, qup2_se7_l3, ddr_bist_stop, NA, phase_flag6, NA, NA,
 			NA, NA, NA, NA, NA, 0, -1),
-	[48] = PINGROUP(48, SDC2_DATA2, NA, NA, NA, NA, NA, NA, NA, NA, NA, NA,
+	[48] = PINGROUP(48, SDC2_DATA, NA, NA, NA, NA, NA, NA, NA, NA, NA, NA,
 			0, -1),
-	[49] = PINGROUP(49, SDC2_DATA3, NA, NA, NA, NA, NA, NA, NA, NA, NA, NA,
+	[49] = PINGROUP(49, SDC2_DATA, NA, NA, NA, NA, NA, NA, NA, NA, NA, NA,
 			0, -1),
 	[50] = PINGROUP(50, SDC2_FB_CLK, NA, NA, NA, NA, NA, NA, NA, NA, NA, NA,
 			0, -1),
@@ -1996,7 +1984,7 @@ static const struct msm_pingroup tuna_groups[] = {
 			phase_flag5, NA, NA, NA, NA, NA, 0, -1),
 	[62] = PINGROUP(62, SDC2_CLK, NA, NA, NA, NA, NA, NA, NA, NA, NA, NA, 0,
 			-1),
-	[63] = PINGROUP(63, SDC2_DATA0, NA, NA, NA, NA, NA, NA, NA, NA, NA, NA,
+	[63] = PINGROUP(63, SDC2_DATA, NA, NA, NA, NA, NA, NA, NA, NA, NA, NA,
 			0, -1),
 	[64] = PINGROUP(64, cam_mclk, NA, NA, NA, NA, NA, NA, NA, NA, NA, NA, 0,
 			-1),
@@ -2111,7 +2099,7 @@ static const struct msm_pingroup tuna_groups[] = {
 			 NA, NA, NA, NA, 0, -1),
 	[119] = PINGROUP(119, qdss_gpio9, NA, NA, NA, NA, NA, NA, NA, NA, NA,
 			 NA, 0, -1),
-	[120] = PINGROUP(120, SDC2_DATA1, NA, NA, NA, NA, NA, NA, NA, NA, NA,
+	[120] = PINGROUP(120, SDC2_DATA, NA, NA, NA, NA, NA, NA, NA, NA, NA,
 			 NA, 0, -1),
 	[121] = PINGROUP(121, NA, NA, NA, NA, NA, NA, NA, NA, NA, NA, NA, 0,
 			 -1),
