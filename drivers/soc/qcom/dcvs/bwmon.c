@@ -92,7 +92,7 @@ static ssize_t show_##name(struct kobject *kobj,			\
 	struct hwmon_node *node = to_hwmon_node(kobj);			\
 	unsigned int i, cnt = 0;					\
 									\
-	for (i = 0; i < n && node->name[i]; i++)			\
+	for (i = 0; i < n && (i == 0 || node->name[i]); i++)		\
 		cnt += scnprintf(buf + cnt, PAGE_SIZE - cnt, "%u ",	\
 							node->name[i]);	\
 	cnt += scnprintf(buf + cnt, PAGE_SIZE - cnt, "\n");		\
