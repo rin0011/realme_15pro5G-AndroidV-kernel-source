@@ -3016,7 +3016,7 @@ static void ufs_qcom_qos_init(struct ufs_hba *hba)
 	struct device_node *group_node;
 	struct ufs_qcom_qos_req *qr;
 	struct qos_cpu_group *qcg;
-	int i, err, mask = 0;
+	int i, err, mask;
 	struct ufs_qcom_host *host = ufshcd_get_variant(hba);
 
 	host->cpufreq_dis = true;
@@ -3033,6 +3033,11 @@ static void ufs_qcom_qos_init(struct ufs_hba *hba)
 		return;
 	}
 
+	if (!of_get_available_child_count(np)) {
+		dev_err(dev, "QoS groups undefined\n");
+		return;
+	}
+
 	qr = kzalloc(sizeof(*qr), GFP_KERNEL);
 	if (!qr)
 		return;
@@ -3040,12 +3045,7 @@ static void ufs_qcom_qos_init(struct ufs_hba *hba)
 	host->ufs_qos = qr;
 	qr->num_groups = of_get_available_child_count(np);
 	dev_dbg(hba->dev, "num-groups: %d\n", qr->num_groups);
-	if (!qr->num_groups) {
-		dev_err(dev, "QoS groups undefined\n");
-		kfree(qr);
-		host->ufs_qos = NULL;
-		return;
-	}
+
 	qcg = kzalloc(sizeof(*qcg) * qr->num_groups, GFP_KERNEL);
 	if (!qcg) {
 		kfree(qr);
@@ -3054,10 +3054,12 @@ static void ufs_qcom_qos_init(struct ufs_hba *hba)
 	}
 	qr->qcg = qcg;
 	for_each_available_child_of_node(np, group_node) {
+		mask = 0;
 		of_property_read_u32(group_node, "mask", &mask);
 		qcg->mask.bits[0] = mask;
-		if (!cpumask_subset(&qcg->mask, cpu_possible_mask)) {
-			dev_err(dev, "Invalid group mask\n");
+		if (!mask || !cpumask_subset(&qcg->mask, cpu_possible_mask)) {
+			dev_err(dev, "Invalid group mask 0x%x\n", mask);
+			host->cpufreq_dis = true;
 			goto out_err;
 		}
 
@@ -3109,7 +3111,7 @@ static void ufs_qcom_parse_irq_affinity(struct ufs_hba *hba)
 	struct device_node *np = dev->of_node;
 	struct ufs_qcom_host *host = ufshcd_get_variant(hba);
 	int mask = 0;
-	int num_cqs = 0;
+	int num_cqs;
 
 	/*
 	 * In a system where CPUs are partially populated, the cpu mapping
@@ -3121,41 +3123,44 @@ static void ufs_qcom_parse_irq_affinity(struct ufs_hba *hba)
 	if (ufs_qcom_partial_cpu_found(host))
 		return;
 
-	if (np) {
-		of_property_read_u32(np, "qcom,prime-mask", &mask);
-		host->perf_mask.bits[0] = mask;
-		if (!cpumask_subset(&host->perf_mask, cpu_possible_mask)) {
-			dev_err(dev, "Invalid group prime mask\n");
-			host->perf_mask.bits[0] = UFS_QCOM_IRQ_PRIME_MASK;
-		}
-		mask = 0;
-		of_property_read_u32(np, "qcom,silver-mask", &mask);
-		host->def_mask.bits[0] = mask;
-		if (!cpumask_subset(&host->def_mask, cpu_possible_mask)) {
-			dev_err(dev, "Invalid group silver mask\n");
-			host->def_mask.bits[0] = UFS_QCOM_IRQ_SLVR_MASK;
-		}
-		mask = 0;
-		if (of_find_property(dev->of_node, "qcom,esi-affinity-mask", &mask)) {
-			num_cqs = mask/sizeof(*host->esi_affinity_mask);
-			host->esi_affinity_mask = devm_kcalloc(hba->dev, num_cqs,
-								sizeof(*host->esi_affinity_mask),
-								GFP_KERNEL);
-			if (!host->esi_affinity_mask)
-				return;
+	if (!np)
+		return;
 
-			mask = of_property_read_variable_u32_array(np, "qcom,esi-affinity-mask",
-					host->esi_affinity_mask, 0, num_cqs);
-
-			if (mask < 0) {
-				dev_info(dev, "Not found esi-affinity-mask property values\n");
-				return;
-			}
-		}
+	of_property_read_u32(np, "qcom,prime-mask", &mask);
+	host->perf_mask.bits[0] = mask;
+	if (!cpumask_subset(&host->perf_mask, cpu_possible_mask)) {
+		dev_err(dev, "Invalid group prime mask 0x%x\n", mask);
+		host->perf_mask.bits[0] = UFS_QCOM_IRQ_PRIME_MASK;
 	}
+	mask = 0;
+	of_property_read_u32(np, "qcom,silver-mask", &mask);
+	host->def_mask.bits[0] = mask;
+	if (!cpumask_subset(&host->def_mask, cpu_possible_mask)) {
+		dev_err(dev, "Invalid group silver mask 0x%x\n", mask);
+		host->def_mask.bits[0] = UFS_QCOM_IRQ_SLVR_MASK;
+	}
+
 	/* If device includes perf mask, enable dynamic irq affinity feature */
 	if (host->perf_mask.bits[0])
 		host->irq_affinity_support = true;
+
+	mask = 0;
+	if (of_find_property(dev->of_node, "qcom,esi-affinity-mask", &mask)) {
+		num_cqs = mask/sizeof(*host->esi_affinity_mask);
+		host->esi_affinity_mask = devm_kcalloc(hba->dev, num_cqs,
+							sizeof(*host->esi_affinity_mask),
+							GFP_KERNEL);
+		if (!host->esi_affinity_mask)
+			return;
+
+		mask = of_property_read_variable_u32_array(np, "qcom,esi-affinity-mask",
+				host->esi_affinity_mask, 0, num_cqs);
+
+		if (mask < 0) {
+			dev_info(dev, "Not found esi-affinity-mask property values\n");
+			return;
+		}
+	}
 }
 
 static void ufs_qcom_parse_pm_level(struct ufs_hba *hba)
