@@ -144,5 +144,6 @@ static const struct scmi_protocol qcom_scmi_vendor = {
 };
 module_scmi_protocol(qcom_scmi_vendor);
 
+MODULE_SOFTDEP("pre: qcom_cpucp");
 MODULE_DESCRIPTION("qcom scmi vendor Protocol");
 MODULE_LICENSE("GPL");
