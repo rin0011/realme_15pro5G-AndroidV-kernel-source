@@ -59,12 +59,14 @@ static int qcom_scmi_get_param(const struct scmi_protocol_handle *ph, void *buf,
 	*msg++ = cpu_to_le32(param_id);
 	memcpy(msg, buf, tx_size);
 	ret = ph->xops->do_xfer(ph, t);
-	if (t->rx.len > rx_size) {
-		pr_err("SCMI received buffer size %lu is more than expected size %lu\n",
-			t->rx.len, rx_size);
-		return -EMSGSIZE;
+	if (!ret) {
+		if (t->rx.len > rx_size) {
+			pr_err("SCMI received buffer size %lu is more than expected size %lu\n",
+				t->rx.len, rx_size);
+			return -EMSGSIZE;
+		}
+		memcpy(buf, t->rx.buf, t->rx.len);
 	}
-	memcpy(buf, t->rx.buf, t->rx.len);
 	ph->xops->xfer_put(ph, t);
 
 	return ret;
