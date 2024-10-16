@@ -905,11 +905,12 @@ static inline u64 sched_irqload(int cpu)
 		return 0;
 }
 
+extern cpumask_t walt_enforce_high_irq_cpu_mask;
 static inline int sched_cpu_high_irqload(int cpu)
 {
 	struct walt_rq *wrq = &per_cpu(walt_rq, cpu);
 
-	return wrq->high_irqload;
+	return wrq->high_irqload || cpumask_test_cpu(cpu, &walt_enforce_high_irq_cpu_mask);
 }
 
 static inline u64
@@ -1478,6 +1479,8 @@ extern int sched_smart_freq_ipc_handler(struct ctl_table *table, int write,
 
 extern u8 smart_freq_legacy_reason_hyst_ms[LEGACY_SMART_FREQ][WALT_NR_CPUS];
 extern void update_smart_freq_legacy_reason_hyst_time(struct walt_sched_cluster *cluster);
+
+#define MIN_UTIL_FOR_STORAGE_BALANCING		700
 
 /* frequent yielder */
 #define MAX_YIELD_CNT_PER_TASK_THR		25

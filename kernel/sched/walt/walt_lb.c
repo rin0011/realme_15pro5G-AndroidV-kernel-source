@@ -243,7 +243,7 @@ static inline bool _walt_can_migrate_task(struct task_struct *p, int dst_cpu,
 		return false;
 
 	if (to_lower) {
-		if (wts->iowaited)
+		if (wts->iowaited && (wts->demand_scaled < MIN_UTIL_FOR_STORAGE_BALANCING))
 			return false;
 		if (per_task_boost(p) == TASK_BOOST_STRICT_MAX &&
 				task_in_related_thread_group(p))
@@ -882,6 +882,10 @@ static void walt_newidle_balance(struct rq *this_rq,
 	if (is_reserved(this_cpu))
 		return;
 
+	/* if cpu entering idle with high irq load skip pulling task */
+	if (sched_cpu_high_irqload(this_cpu))
+		return;
+
 	/*Cluster isn't initialized until after WALT is enabled*/
 	order_index = wrq->cluster->id;
 
@@ -1025,6 +1029,10 @@ static void walt_find_busiest_queue(void *unused, int dst_cpu,
 		return;
 	*done = 1;
 	*busiest = NULL;
+
+	/* if dst_cpu is having high irq load skip searching busy cpu for this */
+	if (sched_cpu_high_irqload(dst_cpu))
+		return;
 
 	/*
 	 * same cluster means, there will only be 1
