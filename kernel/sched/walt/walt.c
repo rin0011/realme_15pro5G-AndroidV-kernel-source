@@ -5256,6 +5256,7 @@ static void rebuild_sd_workfn(struct work_struct *work)
 }
 
 u8 contiguous_yielding_windows;
+DEFINE_PER_CPU(unsigned int, walt_yield_to_sleep);
 static void walt_do_sched_yield_before(void *unused, long *skip)
 {
 	struct walt_task_struct *wts = (struct walt_task_struct *)current->android_vendor_data1;
@@ -5287,6 +5288,7 @@ static void walt_do_sched_yield_before(void *unused, long *skip)
 				wts->yield_state |= YIELD_INDUCED_SLEEP;
 				total_sleep_cnt++;
 				*skip = true;
+				per_cpu(walt_yield_to_sleep, raw_smp_processor_id())++;
 				usleep_range_state(YIELD_SLEEP_TIME_USEC, YIELD_SLEEP_TIME_USEC,
 							TASK_INTERRUPTIBLE);
 			}
@@ -5296,6 +5298,7 @@ static void walt_do_sched_yield_before(void *unused, long *skip)
 	}
 }
 
+unsigned int walt_sched_yield_counter;
 static void walt_do_sched_yield(void *unused, struct rq *rq)
 {
 	struct task_struct *curr = rq->curr;
@@ -5311,6 +5314,8 @@ static void walt_do_sched_yield(void *unused, struct rq *rq)
 
 	if (per_cpu(rt_task_arrival_time, cpu_of(rq)))
 		per_cpu(rt_task_arrival_time, cpu_of(rq)) = 0;
+
+	walt_sched_yield_counter++;
 }
 
 int walt_set_cpus_taken(struct cpumask *set)
