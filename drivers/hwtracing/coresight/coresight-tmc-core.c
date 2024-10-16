@@ -1042,7 +1042,7 @@ static void tmc_remove(struct amba_device *adev)
 		return;
 	}
 	if (drvdata->pm_config.pm_enable)
-		list_del(&drvdata->delayed->link);
+		list_del(&drvdata->link);
 	spin_unlock(&delay_lock);
 
 	if (!drvdata->csdev)
