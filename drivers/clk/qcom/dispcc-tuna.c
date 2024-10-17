@@ -179,12 +179,12 @@ static const struct alpha_pll_config disp_cc_pll2_config = {
 	.config_ctl_hi1_val = 0x00000000,
 	.config_ctl_hi2_val = 0x04008174,
 	.test_ctl_val = 0x00000000,
-	.test_ctl_hi_val = 0x0080c497,
+	.test_ctl_hi_val = 0x0080c496,
 	.test_ctl_hi1_val = 0x40100180,
 	.test_ctl_hi2_val = 0x441001bc,
 	.test_ctl_hi3_val = 0x000003d8,
 	.user_ctl_val = 0x00000000,
-	.user_ctl_hi_val = 0x00250302,
+	.user_ctl_hi_val = 0x00e50302,
 };
 
 static struct clk_alpha_pll disp_cc_pll2 = {
