@@ -319,9 +319,8 @@ bool find_heaviest_topapp(u64 window_start)
 			heavy_wts_to_drop[i]->pipeline_cpu = -1;
 		}
 
-		if (heavy_wts[i]) {
-			 heavy_wts[i]->low_latency |= WALT_LOW_LATENCY_HEAVY_BIT;
-		}
+		if (heavy_wts[i])
+			heavy_wts[i]->low_latency |= WALT_LOW_LATENCY_HEAVY_BIT;
 	}
 
 	if (heavy_wts[MAX_NR_PIPELINE - 1])
