@@ -2100,6 +2100,16 @@ static const struct adsp_data tuna_mpss_resource = {
 	.both_dumps = true,
 };
 
+static const struct adsp_data tuna_soccp_resource = {
+	.crash_reason_smem = 656,
+	.firmware_name = "soccp.mbn",
+	.pas_id = 51,
+	.ssr_name = "soccp",
+	.sysmon_name = "soccp",
+	.check_status = true,
+	.auto_boot = true,
+};
+
 static const struct adsp_data kera_adsp_resource = {
 	.crash_reason_smem = 423,
 	.firmware_name = "adsp.mdt",
