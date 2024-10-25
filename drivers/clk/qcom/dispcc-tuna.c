@@ -964,8 +964,6 @@ static struct clk_rcg2 disp_cc_mdss_hdmi_pclk_clk_src = {
 };
 
 static const struct freq_tbl ftbl_disp_cc_mdss_mdp_clk_src[] = {
-	F(6400000, P_BI_TCXO, 3, 0, 0),
-	F(19200000, P_BI_TCXO, 1, 0, 0),
 	F(85714286, P_DISP_CC_PLL0_OUT_MAIN, 3, 0, 0),
 	F(100000000, P_DISP_CC_PLL0_OUT_MAIN, 3, 0, 0),
 	F(150000000, P_DISP_CC_PLL0_OUT_MAIN, 3, 0, 0),
