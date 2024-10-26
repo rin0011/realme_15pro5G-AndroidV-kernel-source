@@ -29,14 +29,6 @@ config GUNYAH_QCOM_PLATFORM
 
 	  Say Y/M here to use Gunyah on Qualcomm platforms.
 
-config GUNYAH_LEGACY
-	  bool "Gunyah legacy interface"
-	  depends on GUNYAH
-	  help
-	    Enables to use the Gunyah legacy API interface.
-	    Legacy Gunyah lacks the support to work with the
-	    multiple sgl entries.
-
 config GUNYAH_IRQFD
 	tristate "Gunyah irqfd interface"
 	depends on GUNYAH
