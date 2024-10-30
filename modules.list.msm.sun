@@ -80,6 +80,7 @@ qcom-dcvs.ko
 qcom_llcc_pmu.ko
 qcom-pmu-lib.ko
 qcom-ipcc.ko
+qnoc-kera.ko
 qnoc-qos.ko
 qnoc-sun.ko
 qnoc-tuna.ko
