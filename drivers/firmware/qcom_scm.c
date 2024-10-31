@@ -30,6 +30,7 @@
 #include <linux/interrupt.h>
 #include <linux/spinlock.h>
 #include <linux/ktime.h>
+#include <linux/gunyah/gh_rm_drv.h>
 
 #include "qcom_scm.h"
 #include "qtee_shmbridge_internal.h"
@@ -1247,6 +1248,9 @@ int qcom_scm_assign_mem(phys_addr_t mem_addr, size_t mem_sz,
 	void *ptr;
 	int ret, i, b;
 	u64 srcvm_bits = *srcvm;
+
+	if (!gh_rm_needs_scm_assign(srcvm, newvm, dest_cnt))
+		return 0;
 
 	src_sz = hweight64(srcvm_bits) * sizeof(*src);
 	mem_to_map_sz = sizeof(*mem_to_map);
