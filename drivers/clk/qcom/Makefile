@@ -19,7 +19,7 @@ clk-qcom-y += clk-hfpll.o
 clk-qcom-y += reset.o
 clk-qcom-y += clk-pm.o
 clk-qcom-y += clk-debug.o
-clk-qcom-$(CONFIG_QCOM_GDSC) += gdsc.o
+clk-qcom-$(CONFIG_QCOM_GDSC) += gdsc.o gdsc-debug.o
 obj-$(CONFIG_COMMON_CLK_QCOM) += clk-dummy.o
 
 obj-$(CONFIG_QCOM_GDSC_REGULATOR) += gdsc-regulator.o
