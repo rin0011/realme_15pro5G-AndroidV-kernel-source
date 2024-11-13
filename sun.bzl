@@ -342,7 +342,6 @@ def define_sun():
             variant = variant,
             in_tree_module_list = mod_list,
             boot_image_opts = boot_image_opts(
-                earlycon_addr = "qcom_geni,0x00a9c000",
                 kernel_vendor_cmdline_extras = kernel_vendor_cmdline_extras,
                 board_kernel_cmdline_extras = board_kernel_cmdline_extras,
                 board_bootconfig_extras = board_bootconfig_extras,
