@@ -266,6 +266,7 @@ def define_sun():
         "drivers/usb/host/xhci-sideband.ko",
         "drivers/usb/phy/phy-generic.ko",
         "drivers/usb/phy/phy-msm-m31-eusb2.ko",
+        "drivers/usb/phy/phy-msm-snps-eusb2.ko",
         "drivers/usb/phy/phy-msm-ssusb-qmp.ko",
         "drivers/usb/phy/phy-qcom-emu.ko",
         "drivers/usb/redriver/nb7vpq904m.ko",
