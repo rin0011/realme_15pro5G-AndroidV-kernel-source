@@ -57,6 +57,7 @@ gpucc-sun.ko
 secure_buffer.ko
 dispcc-sun.ko
 dispcc-tuna.ko
+camcc-kera.ko
 camcc-sun.ko
 camcc-tuna.ko
 evacc-sun.ko
