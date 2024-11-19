@@ -2313,8 +2313,20 @@ static const struct msm_pinctrl_soc_data tuna_pinctrl = {
 	.egpio_func = 11,
 };
 
+static const struct msm_pinctrl_soc_data tuna_vm_pinctrl = {
+	.pins = tuna_pins,
+	.npins = ARRAY_SIZE(tuna_pins),
+	.functions = tuna_functions,
+	.nfunctions = ARRAY_SIZE(tuna_functions),
+	.groups = tuna_groups,
+	.ngroups = ARRAY_SIZE(tuna_groups),
+	.ngpios = 188,
+	.egpio_func = 11,
+};
+
 static const struct of_device_id tuna_pinctrl_of_match[] = {
 	{ .compatible = "qcom,tuna-tlmm", .data = &tuna_pinctrl},
+	{ .compatible = "qcom,tuna-vm-tlmm", .data = &tuna_vm_pinctrl},
 	{},
 };
 
@@ -2354,3 +2366,4 @@ module_exit(tuna_pinctrl_exit);
 MODULE_DESCRIPTION("QTI tuna pinctrl driver");
 MODULE_LICENSE("GPL");
 MODULE_DEVICE_TABLE(of, tuna_pinctrl_of_match);
+MODULE_SOFTDEP("pre: qcom_tlmm_vm_irqchip");

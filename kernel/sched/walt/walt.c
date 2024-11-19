@@ -4441,6 +4441,7 @@ static void walt_irq_work(struct irq_work *irq_work)
 			per_cpu(wakeup_ctr, cpu) = 0;
 
 			walt_core_utilization(cpu);
+			set_cpu_flag(cpu, CPU_FIRST_ENQ_IN_WINDOW, 0);
 		}
 
 		check_obet();
@@ -4810,7 +4811,8 @@ static void android_rvh_enqueue_task(void *unused, struct rq *rq,
 
 	if ((flags & ENQUEUE_WAKEUP) && walt_flag_test(p, WALT_TRAILBLAZER_BIT)) {
 		waltgov_run_callback(rq, WALT_CPUFREQ_TRAILBLAZER_BIT);
-	} else if ((flags & ENQUEUE_WAKEUP) && do_pl_notif(rq)) {
+	} else if (((flags & ENQUEUE_WAKEUP) ||
+			!is_cpu_flag_set(cpu_of(rq), CPU_FIRST_ENQ_IN_WINDOW)) && do_pl_notif(rq)) {
 		waltgov_run_callback(rq, WALT_CPUFREQ_PL_BIT);
 	} else if (walt_feat(WALT_FEAT_UCLAMP_FREQ_BIT)) {
 		unsigned long min, max;
@@ -4825,6 +4827,7 @@ static void android_rvh_enqueue_task(void *unused, struct rq *rq,
 		}
 	}
 
+	set_cpu_flag(cpu_of(rq), CPU_FIRST_ENQ_IN_WINDOW, 1);
 	if (num_sched_clusters >= 2) {
 		mid_cluster_cpu = cpumask_first(
 				&cpu_array[0][num_sched_clusters - 2]);
@@ -5256,6 +5259,7 @@ static void rebuild_sd_workfn(struct work_struct *work)
 }
 
 u8 contiguous_yielding_windows;
+DEFINE_PER_CPU(unsigned int, walt_yield_to_sleep);
 static void walt_do_sched_yield_before(void *unused, long *skip)
 {
 	struct walt_task_struct *wts = (struct walt_task_struct *)current->android_vendor_data1;
@@ -5287,6 +5291,7 @@ static void walt_do_sched_yield_before(void *unused, long *skip)
 				wts->yield_state |= YIELD_INDUCED_SLEEP;
 				total_sleep_cnt++;
 				*skip = true;
+				per_cpu(walt_yield_to_sleep, raw_smp_processor_id())++;
 				usleep_range_state(YIELD_SLEEP_TIME_USEC, YIELD_SLEEP_TIME_USEC,
 							TASK_INTERRUPTIBLE);
 			}
@@ -5296,6 +5301,7 @@ static void walt_do_sched_yield_before(void *unused, long *skip)
 	}
 }
 
+unsigned int walt_sched_yield_counter;
 static void walt_do_sched_yield(void *unused, struct rq *rq)
 {
 	struct task_struct *curr = rq->curr;
@@ -5311,6 +5317,8 @@ static void walt_do_sched_yield(void *unused, struct rq *rq)
 
 	if (per_cpu(rt_task_arrival_time, cpu_of(rq)))
 		per_cpu(rt_task_arrival_time, cpu_of(rq)) = 0;
+
+	walt_sched_yield_counter++;
 }
 
 int walt_set_cpus_taken(struct cpumask *set)

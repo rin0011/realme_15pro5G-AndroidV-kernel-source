@@ -23,6 +23,7 @@
 #include "clk-regmap-divider.h"
 #include "clk-regmap-mux.h"
 #include "common.h"
+#include "gdsc.h"
 #include "reset.h"
 #include "vdd-level.h"
 
@@ -179,12 +180,12 @@ static const struct alpha_pll_config disp_cc_pll2_config = {
 	.config_ctl_hi1_val = 0x00000000,
 	.config_ctl_hi2_val = 0x04008174,
 	.test_ctl_val = 0x00000000,
-	.test_ctl_hi_val = 0x0080c497,
+	.test_ctl_hi_val = 0x0080c496,
 	.test_ctl_hi1_val = 0x40100180,
 	.test_ctl_hi2_val = 0x441001bc,
 	.test_ctl_hi3_val = 0x000003d8,
 	.user_ctl_val = 0x00000000,
-	.user_ctl_hi_val = 0x00250302,
+	.user_ctl_hi_val = 0x00e50302,
 };
 
 static struct clk_alpha_pll disp_cc_pll2 = {
@@ -963,8 +964,6 @@ static struct clk_rcg2 disp_cc_mdss_hdmi_pclk_clk_src = {
 };
 
 static const struct freq_tbl ftbl_disp_cc_mdss_mdp_clk_src[] = {
-	F(6400000, P_BI_TCXO, 3, 0, 0),
-	F(19200000, P_BI_TCXO, 1, 0, 0),
 	F(85714286, P_DISP_CC_PLL0_OUT_MAIN, 3, 0, 0),
 	F(100000000, P_DISP_CC_PLL0_OUT_MAIN, 3, 0, 0),
 	F(150000000, P_DISP_CC_PLL0_OUT_MAIN, 3, 0, 0),
@@ -2207,6 +2206,32 @@ static struct clk_branch disp_cc_osc_clk = {
 	},
 };
 
+static struct gdsc disp_cc_mdss_core_gdsc = {
+	.gdscr = 0x9000,
+	.en_rest_wait_val = 0x2,
+	.en_few_wait_val = 0x2,
+	.clk_dis_wait_val = 0xf,
+	.pd = {
+		.name = "disp_cc_mdss_core_gdsc",
+	},
+	.pwrsts = PWRSTS_OFF_ON,
+	.flags = POLL_CFG_GDSCR | RETAIN_FF_ENABLE,
+	.supply = "vdd_mm",
+};
+
+static struct gdsc disp_cc_mdss_core_int2_gdsc = {
+	.gdscr = 0xb000,
+	.en_rest_wait_val = 0x2,
+	.en_few_wait_val = 0x2,
+	.clk_dis_wait_val = 0xf,
+	.pd = {
+		.name = "disp_cc_mdss_core_int2_gdsc",
+	},
+	.pwrsts = PWRSTS_OFF_ON,
+	.flags = POLL_CFG_GDSCR | RETAIN_FF_ENABLE,
+	.supply = "vdd_mm",
+};
+
 static struct clk_regmap *disp_cc_tuna_clocks[] = {
 	[DISP_CC_ESYNC0_CLK] = &disp_cc_esync0_clk.clkr,
 	[DISP_CC_ESYNC0_CLK_SRC] = &disp_cc_esync0_clk_src.clkr,
@@ -2306,6 +2331,11 @@ static struct clk_regmap *disp_cc_tuna_clocks[] = {
 	[DISP_CC_XO_CLK_SRC] = &disp_cc_xo_clk_src.clkr,
 };
 
+static struct gdsc *disp_cc_tuna_gdscs[] = {
+	[DISP_CC_MDSS_CORE_GDSC] = &disp_cc_mdss_core_gdsc,
+	[DISP_CC_MDSS_CORE_INT2_GDSC] = &disp_cc_mdss_core_int2_gdsc,
+};
+
 static const struct qcom_reset_map disp_cc_tuna_resets[] = {
 	[DISP_CC_MDSS_CORE_BCR] = { 0x8000 },
 	[DISP_CC_MDSS_CORE_INT2_BCR] = { 0xa000 },
@@ -2328,6 +2358,8 @@ static struct qcom_cc_desc disp_cc_tuna_desc = {
 	.num_resets = ARRAY_SIZE(disp_cc_tuna_resets),
 	.clk_regulators = disp_cc_tuna_regulators,
 	.num_clk_regulators = ARRAY_SIZE(disp_cc_tuna_regulators),
+	.gdscs = disp_cc_tuna_gdscs,
+	.num_gdscs = ARRAY_SIZE(disp_cc_tuna_gdscs),
 };
 
 static const struct of_device_id disp_cc_tuna_match_table[] = {

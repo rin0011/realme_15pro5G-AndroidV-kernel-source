@@ -1134,7 +1134,8 @@ static inline bool walt_get_rtg_status(struct task_struct *p)
 	return ret;
 }
 
-#define CPU_RESERVED 1
+#define CPU_RESERVED			BIT(0)
+#define CPU_FIRST_ENQ_IN_WINDOW		BIT(1)
 static inline int is_reserved(int cpu)
 {
 	struct walt_rq *wrq = &per_cpu(walt_rq, cpu);
@@ -1154,6 +1155,23 @@ static inline void clear_reserved(int cpu)
 	struct walt_rq *wrq = &per_cpu(walt_rq, cpu);
 
 	clear_bit(CPU_RESERVED, &wrq->walt_flags);
+}
+
+static inline bool is_cpu_flag_set(int cpu, unsigned int bit)
+{
+	struct walt_rq *wrq = &per_cpu(walt_rq, cpu);
+
+	return test_bit(bit, &wrq->walt_flags);
+}
+
+static inline void set_cpu_flag(int cpu, unsigned int bit, bool set)
+{
+	struct walt_rq *wrq = &per_cpu(walt_rq, cpu);
+
+	if (set)
+		set_bit(bit, &wrq->walt_flags);
+	else
+		clear_bit(bit, &wrq->walt_flags);
 }
 
 static inline void walt_irq_work_queue(struct irq_work *work)
@@ -1530,4 +1548,6 @@ extern unsigned int sysctl_pipeline_special_task_util_thres;
 extern unsigned int sysctl_pipeline_non_special_task_util_thres;
 extern unsigned int sysctl_pipeline_pin_thres_low_pct;
 extern unsigned int sysctl_pipeline_pin_thres_high_pct;
+DECLARE_PER_CPU(unsigned int, walt_yield_to_sleep);
+extern unsigned int walt_sched_yield_counter;
 #endif /* _WALT_H */

@@ -31,6 +31,7 @@
 #define BCL_REVISION2         0x01
 #define BCL_PARAM_1           0x0e
 #define BCL_PARAM_2           0x0f
+#define ANA_MAJOR_OFFSET      0x03
 
 #define BCL_IBAT_HIGH         0x4B
 #define BCL_IBAT_TOO_HIGH     0x4C
@@ -76,6 +77,8 @@
 #define BCL_IBAT_SCALING_REV5_NA   61037
 #define BCL_IBAT_THRESH_SCALING_REV5_UA   156255 /* 610.37uA * 256 */
 #define BCL_VBAT_TRIP_CNT     3
+#define BCL_GEN4_ANA_MAJOR    3
+#define BCL_IBAT_COTTID_SCALING 366220
 
 #define MAX_PERPH_COUNT       3
 #define IPC_LOGPAGES          2
@@ -156,6 +159,7 @@ struct bcl_device {
 	uint16_t			fg_bcl_addr;
 	uint8_t				dig_major;
 	uint8_t				dig_minor;
+	uint8_t				ana_major;
 	uint8_t				bcl_param_1;
 	uint8_t				bcl_type;
 	void				*ipc_log;
@@ -332,7 +336,8 @@ static int bcl_set_ibat(struct thermal_zone_device *tz, int low, int high)
 		convert_ibat_to_adc_val(bat_data->dev, &thresh_value,
 				BCL_IBAT_CCM_SCALING_UA *
 				bat_data->dev->ibat_ext_range_factor);
-	else if (bat_data->dev->dig_major >= BCL_GEN4_MAJOR_REV)
+	else if (bat_data->dev->dig_major >= BCL_GEN4_MAJOR_REV &&
+				bat_data->dev->ana_major >= BCL_GEN4_ANA_MAJOR)
 		convert_ibat_to_adc_val(bat_data->dev, &thresh_value,
 				BCL_IBAT_THRESH_SCALING_REV5_UA *
 				bat_data->dev->ibat_ext_range_factor);
@@ -414,9 +419,13 @@ static int bcl_read_ibat(struct thermal_zone_device *tz, int *adc_value)
 			convert_adc_to_ibat_val(bat_data->dev, adc_value,
 				BCL_IBAT_CCM_SCALING_UA *
 				bat_data->dev->ibat_ext_range_factor);
-		else if (bat_data->dev->dig_major >= BCL_GEN4_MAJOR_REV)
+		else if (bat_data->dev->dig_major >= BCL_GEN4_MAJOR_REV
+						&& bat_data->dev->ana_major >= BCL_GEN4_ANA_MAJOR)
 			convert_adc_nu_to_mu_val(adc_value,
 				BCL_IBAT_SCALING_REV5_NA);
+		else if (bat_data->dev->dig_major >= BCL_GEN4_MAJOR_REV)
+			convert_adc_nu_to_mu_val(adc_value,
+				BCL_IBAT_COTTID_SCALING);
 		else if (bat_data->dev->dig_major >= BCL_GEN3_MAJOR_REV)
 			convert_adc_to_ibat_val(bat_data->dev, adc_value,
 				BCL_IBAT_SCALING_REV4_UA *
@@ -964,6 +973,12 @@ static int bcl_version_init_and_check(struct bcl_device *bcl_perph)
 		bcl_perph->bcl_param_1 = 0;
 		bcl_perph->bcl_type = 0;
 	}
+
+	ret = bcl_read_register(bcl_perph, ANA_MAJOR_OFFSET, &val);
+	if (ret < 0)
+		return ret;
+
+	bcl_perph->ana_major = val;
 
 	if ((bcl_perph->bcl_monitor_type == BCL_MON_VBAT_ONLY) ||
 			(bcl_perph->bcl_monitor_type == BCL_MON_IBAT_ONLY)) {

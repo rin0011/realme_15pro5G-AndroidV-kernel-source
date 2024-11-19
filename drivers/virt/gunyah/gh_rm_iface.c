@@ -81,7 +81,7 @@ int gh_update_vm_prop_table(enum gh_vm_names vm_name,
 	if (!vm_prop)
 		return -EINVAL;
 
-	if (vm_prop->vmid < 0 || vm_name < GH_SELF_VM || vm_name > GH_VM_MAX)
+	if (vm_prop->vmid < 0 || vm_name < GH_SELF_VM || vm_name >= GH_VM_MAX)
 		return -EINVAL;
 
 	spin_lock(&gh_vm_table_lock);
@@ -143,9 +143,8 @@ int ghd_rm_get_vmid(enum gh_vm_names vm_name, gh_vmid_t *vmid)
 	gh_vmid_t _vmid;
 	int ret = 0;
 
-	if (vm_name < GH_SELF_VM || vm_name > GH_VM_MAX)
+	if (vm_name < GH_SELF_VM || vm_name >= GH_VM_MAX)
 		return -EINVAL;
-
 
 	spin_lock(&gh_vm_table_lock);
 
@@ -210,11 +209,10 @@ int gh_rm_get_vminfo(enum gh_vm_names vm_name, struct gh_vminfo *vm)
 	if (!vm)
 		return -EINVAL;
 
-	spin_lock(&gh_vm_table_lock);
-	if (vm_name < GH_SELF_VM || vm_name > GH_VM_MAX) {
-		spin_unlock(&gh_vm_table_lock);
+	if (vm_name < GH_SELF_VM || vm_name >= GH_VM_MAX)
 		return -EINVAL;
-	}
+
+	spin_lock(&gh_vm_table_lock);
 
 	vm->guid = gh_vm_table[vm_name].guid;
 	vm->uri = gh_vm_table[vm_name].uri;
@@ -994,7 +992,7 @@ int gh_rm_vm_alloc_vmid(enum gh_vm_names vm_name, int *vmid)
 	/* Look up for the vm_name<->vmid pair if already present.
 	 * If so, return.
 	 */
-	if (vm_name < GH_SELF_VM || vm_name > GH_VM_MAX)
+	if (vm_name < GH_SELF_VM || vm_name >= GH_VM_MAX)
 		return -EINVAL;
 
 	spin_lock(&gh_vm_table_lock);
@@ -2047,6 +2045,9 @@ struct gh_sgl_desc *gh_rm_mem_accept(gh_memparcel_handle_t handle, u8 mem_type,
 	if (IS_ERR(req_payload))
 		return ERR_CAST(req_payload);
 
+#if defined(CONFIG_GUNYAH_LEGACY)
+	flags |= GH_RM_MEM_ACCEPT_MAP_IPA_CONTIGUOUS;
+#endif
 	/* Send DONE flag only after all sgl_desc fragments are received */
 	if (flags & GH_RM_MEM_ACCEPT_MAP_IPA_CONTIGUOUS || sgl_desc) {
 		multi_call = false;
@@ -2399,6 +2400,13 @@ int gh_rm_mem_donate(u8 mem_type, u8 flags, gh_label_t label,
 
 	trace_gh_rm_mem_donate(mem_type, flags, label, acl_desc, sgl_desc,
 			       mem_attr_desc, handle, 0, DONATE);
+
+#if defined(CONFIG_GUNYAH_LEGACY)
+	if (sgl_desc->n_sgl_entries != 1) {
+		pr_err("%s: Physically contiguous memory required\n", __func__);
+		return -EINVAL;
+	}
+#endif
 
 	if (acl_desc->n_acl_entries != 1) {
 		pr_err("%s: Donate requires single destination VM\n", __func__);

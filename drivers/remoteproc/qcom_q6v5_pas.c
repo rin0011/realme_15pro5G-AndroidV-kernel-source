@@ -162,6 +162,8 @@ struct qcom_adsp {
 	void *tcsr_addr;
 	void *spare_reg_addr;
 	bool check_status;
+	bool rproc_ddr_set_icc_low_svs;
+	unsigned int rproc_ddr_lowsvs_icc_bw;
 };
 
 static ssize_t txn_id_show(struct device *dev, struct device_attribute *attr, char *buf)
@@ -805,6 +807,55 @@ static bool rproc_poll_handover(struct qcom_adsp *adsp)
 
 	return adsp->q6v5.handover_issued;
 }
+
+static int bus_bw_init(struct qcom_adsp *adsp)
+{
+	int ret = 0;
+	bool rproc_ddr_set_icc_low_svs;
+	unsigned int rproc_ddr_lowsvs_icc_bw;
+
+	rproc_ddr_set_icc_low_svs = of_property_read_bool(adsp->dev->of_node,
+				     "rproc-ddr-set-icc-low-svs");
+
+	if (rproc_ddr_set_icc_low_svs) {
+		adsp->rproc_ddr_set_icc_low_svs = rproc_ddr_set_icc_low_svs;
+		ret = of_property_read_u32(adsp->dev->of_node,
+				"rproc-ddr-lowsvs-icc-bw", &rproc_ddr_lowsvs_icc_bw);
+		if (!rproc_ddr_lowsvs_icc_bw) {
+			dev_err(adsp->dev, "Low SVS ICC Bw is not available.\n");
+			return ret;
+		}
+		adsp->rproc_ddr_lowsvs_icc_bw = rproc_ddr_lowsvs_icc_bw;
+		dev_info(adsp->dev, "LowSVS Bus BW: %d\n", rproc_ddr_lowsvs_icc_bw);
+	} else {
+		adsp->rproc_ddr_set_icc_low_svs = false;
+		dev_info(adsp->dev, "Low SVS vote for ICC is not set.\n");
+	}
+
+	return ret;
+}
+
+static int set_icc_bw(struct qcom_adsp *adsp, bool enable)
+{
+	int ret;
+	u32 avg_bw, peak_bw;
+
+	avg_bw = enable
+			? adsp->rproc_ddr_set_icc_low_svs
+				? adsp->rproc_ddr_lowsvs_icc_bw
+				: UINT_MAX
+			: 0;
+	peak_bw = enable
+			? adsp->rproc_ddr_set_icc_low_svs
+				? adsp->rproc_ddr_lowsvs_icc_bw
+				: UINT_MAX
+			: 0;
+
+	ret = icc_set_bw(adsp->q6v5.path, avg_bw, peak_bw);
+
+	return ret;
+}
+
 /*
  * rproc_set_state: Request the SOCCP to change state
  *
@@ -854,7 +905,7 @@ int rproc_set_state(struct rproc *rproc, bool state)
 			goto soccp_out;
 		}
 
-		ret = icc_set_bw(adsp->q6v5.path, UINT_MAX, UINT_MAX);
+		ret = set_icc_bw(adsp, true);
 		if (ret < 0) {
 			dev_err(adsp->q6v5.dev, "failed to set bandwidth request\n");
 			goto soccp_out;
@@ -923,7 +974,7 @@ int rproc_set_state(struct rproc *rproc, bool state)
 				goto soccp_out;
 			}
 
-			ret = icc_set_bw(adsp->q6v5.path, 0, 0);
+			ret = set_icc_bw(adsp, false);
 			if (ret < 0) {
 				dev_err(adsp->q6v5.dev, "failed to set bandwidth request\n");
 				goto soccp_out;
@@ -1410,6 +1461,10 @@ static int adsp_probe(struct platform_device *pdev)
 	if (ret)
 		goto free_rproc;
 
+	ret = bus_bw_init(adsp);
+	if (ret)
+		goto free_rproc;
+
 	ret = adsp_pds_attach(&pdev->dev, adsp->proxy_pds,
 			      desc->proxy_pd_names);
 	if (ret < 0)
@@ -1551,6 +1606,7 @@ static const struct adsp_data sdxpinn_mpss_resource = {
 	.dtb_firmware_name = "modem_dtb.mdt",
 	.dtb_pas_id = 0x26,
 	.minidump_id = 3,
+	.decrypt_shutdown = true,
 	.uses_elf64 = true,
 	.auto_boot = false,
 	.load_state = "modem",
@@ -2284,6 +2340,17 @@ static const struct adsp_data tuna_wpss_resource = {
 	.ssctl_id = 0x19,
 };
 
+static const struct adsp_data kera_wpss_resource = {
+	.crash_reason_smem = 626,
+	.firmware_name = "wpss.mdt",
+	.pas_id = 6,
+	.minidump_id = 4,
+	.uses_elf64 = true,
+	.ssr_name = "wpss",
+	.sysmon_name = "wpss",
+	.ssctl_id = 0x19,
+};
+
 static const struct of_device_id adsp_of_match[] = {
 	{ .compatible = "qcom,msm8226-adsp-pil", .data = &adsp_resource_init},
 	{ .compatible = "qcom,msm8953-adsp-pil", .data = &msm8996_adsp_resource},
@@ -2356,6 +2423,7 @@ static const struct of_device_id adsp_of_match[] = {
 	{ .compatible = "qcom,monaco-adsp-pas", .data = &monaco_adsp_resource},
 	{ .compatible = "qcom,monaco-modem-pas", .data = &monaco_modem_resource},
 	{ .compatible = "qcom,tuna-wpss-pas", .data = &tuna_wpss_resource},
+	{ .compatible = "qcom,kera-wpss-pas", .data = &kera_wpss_resource},
 	{ },
 };
 MODULE_DEVICE_TABLE(of, adsp_of_match);

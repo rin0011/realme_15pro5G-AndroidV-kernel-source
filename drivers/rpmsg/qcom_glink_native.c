@@ -606,7 +606,7 @@ static int qcom_glink_send_open_req(struct qcom_glink *glink,
 	req.msg.cmd = cpu_to_le16(GLINK_CMD_OPEN);
 	req.msg.param1 = cpu_to_le16(channel->lcid);
 	req.msg.param2 = cpu_to_le32(name_len);
-	strcpy(req.name, channel->name);
+	strscpy(req.name, channel->name, GLINK_NAME_SIZE);
 
 	ret = qcom_glink_tx(glink, &req, req_len, NULL, 0, true);
 	if (ret)
@@ -2382,6 +2382,23 @@ static void qcom_glink_work(struct work_struct *work)
 
 void qcom_glink_early_ssr_notify(void *data)
 {
+	struct qcom_glink *glink = data;
+	struct glink_channel *channel;
+	unsigned long flags;
+	int cid;
+
+	if (!glink)
+		return;
+
+	glink->abort_tx = true;
+	/* To wakeup any blocking writers */
+	wake_up_all(&glink->tx_avail_notify);
+
+	spin_lock_irqsave(&glink->idr_lock, flags);
+	idr_for_each_entry(&glink->lcids, channel, cid) {
+		wake_up(&channel->intent_req_wq);
+	}
+	spin_unlock_irqrestore(&glink->idr_lock, flags);
 }
 EXPORT_SYMBOL(qcom_glink_early_ssr_notify);
 

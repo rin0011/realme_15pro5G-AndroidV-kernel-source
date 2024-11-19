@@ -1497,4 +1497,13 @@ config SM_CAMCC_KERA
 	  Say Y if you want to support camera devices and functionality such as
 	  capturing pictures.
 
+config SM_GPUCC_KERA
+	tristate "KERA Graphics Clock Controller"
+        depends on SM_GCC_KERA
+        help
+	  Support for the graphics clock controller on Qualcomm Technologies, Inc
+	  Kera devices.
+	  Say Y if you want to support graphics controller devices and
+	  functionality such as 3D graphics.
+
 endif
