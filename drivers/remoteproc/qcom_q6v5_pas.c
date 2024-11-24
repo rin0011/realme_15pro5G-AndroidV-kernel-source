@@ -2053,7 +2053,7 @@ static const struct adsp_data tuna_adsp_resource = {
 	.sysmon_name = "adsp",
 	.ssctl_id = 0x14,
 	.uses_elf64 = true,
-	.auto_boot = false,
+	.auto_boot = true,
 	.crash_reason_stack = 660,
 	.smem_host_id = 2,
 };
@@ -2074,7 +2074,7 @@ static const struct adsp_data tuna_cdsp_resource = {
 	.region_assign_count = 1,
 	.region_assign_shared = true,
 	.region_assign_vmid = QCOM_SCM_VMID_CDSP,
-	.auto_boot = false,
+	.auto_boot = true,
 	.crash_reason_stack = 660,
 	.smem_host_id = 5,
 };
@@ -2098,6 +2098,16 @@ static const struct adsp_data tuna_mpss_resource = {
 	.region_assign_vmid = QCOM_SCM_VMID_MSS_MSA,
 	.dma_phys_below_32b = true,
 	.both_dumps = true,
+};
+
+static const struct adsp_data tuna_soccp_resource = {
+	.crash_reason_smem = 656,
+	.firmware_name = "soccp.mbn",
+	.pas_id = 51,
+	.ssr_name = "soccp",
+	.sysmon_name = "soccp",
+	.check_status = true,
+	.auto_boot = true,
 };
 
 static const struct adsp_data kera_adsp_resource = {
