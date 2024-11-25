@@ -3982,8 +3982,7 @@ static int haptics_config_wa(struct haptics_chip *chip)
 			chip->wa_flags |= SW_CTRL_HBST;
 		break;
 	case HAP530_HV:
-		chip->wa_flags |= EN_RUNTIME_PM | VISENSE_RECOVERY_EN |
-			IGNORE_SWR_IN_SPMI_PLAY | DISCHARGE_VNDRV_LDO;
+		chip->wa_flags |= EN_RUNTIME_PM | IGNORE_SWR_IN_SPMI_PLAY | DISCHARGE_VNDRV_LDO;
 		break;
 	default:
 		dev_err(chip->dev, "HW type %d does not match\n",
