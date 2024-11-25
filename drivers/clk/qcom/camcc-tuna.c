@@ -710,6 +710,7 @@ static struct clk_rcg2 cam_cc_camnoc_rt_axi_clk_src = {
 	.clkr = {
 		.crm = &cam_crm,
 		.crm_vcd = 8,
+		.crm_num_node = 2,
 	},
 	.clkr.hw.init = &(const struct clk_init_data) {
 		.name = "cam_cc_camnoc_rt_axi_clk_src",
