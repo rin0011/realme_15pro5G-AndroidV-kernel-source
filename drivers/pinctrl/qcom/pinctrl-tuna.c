@@ -2320,7 +2320,7 @@ static const struct msm_pinctrl_soc_data tuna_vm_pinctrl = {
 	.nfunctions = ARRAY_SIZE(tuna_functions),
 	.groups = tuna_groups,
 	.ngroups = ARRAY_SIZE(tuna_groups),
-	.ngpios = 188,
+	.ngpios = 192,
 	.egpio_func = 11,
 };
 
