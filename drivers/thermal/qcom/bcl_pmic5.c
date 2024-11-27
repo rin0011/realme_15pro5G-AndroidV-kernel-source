@@ -74,7 +74,6 @@
 #define BCL_IBAT_SCALING_REV5_NA   61037
 #define BCL_IBAT_THRESH_SCALING_REV5_UA   156255 /* 610.37uA * 256 */
 #define BCL_VBAT_TRIP_CNT     3
-#define BCL_GEN4_ANA_MAJOR    3
 #define BCL_IBAT_COTTID_SCALING 366220
 
 #define MAX_PERPH_COUNT       3
@@ -120,6 +119,8 @@ struct bcl_desc {
 	bool vadc_type;
 	u32 vbat_regs[REG_MAX];
 	bool vbat_zone_enabled;
+	u32 ibat_scaling_factor;
+	u32 ibat_thresh_scaling_factor;
 };
 
 static char bcl_int_names[BCL_TYPE_MAX][25] = {
@@ -169,7 +170,6 @@ struct bcl_device {
 	uint16_t			fg_bcl_addr;
 	uint8_t				dig_major;
 	uint8_t				dig_minor;
-	uint8_t				ana_major;
 	uint8_t				bcl_param_1;
 	uint8_t				bcl_type;
 	void				*ipc_log;
@@ -369,11 +369,10 @@ static int bcl_set_ibat(struct thermal_zone_device *tz, int low, int high)
 		convert_ibat_to_adc_val(bat_data->dev, &thresh_value,
 				BCL_IBAT_CCM_SCALING_UA *
 				bat_data->dev->ibat_ext_range_factor);
-	else if (bat_data->dev->dig_major >= BCL_GEN4_MAJOR_REV &&
-				bat_data->dev->ana_major >= BCL_GEN4_ANA_MAJOR)
+	else if (bat_data->dev->dig_major >= BCL_GEN4_MAJOR_REV)
 		convert_ibat_to_adc_val(bat_data->dev, &thresh_value,
-				BCL_IBAT_THRESH_SCALING_REV5_UA *
-				bat_data->dev->ibat_ext_range_factor);
+			bat_data->dev->desc->ibat_thresh_scaling_factor *
+			bat_data->dev->ibat_ext_range_factor);
 	else if (bat_data->dev->dig_major >= BCL_GEN3_MAJOR_REV)
 		convert_ibat_to_adc_val(bat_data->dev, &thresh_value,
 				BCL_IBAT_SCALING_REV4_UA *
@@ -382,6 +381,7 @@ static int bcl_set_ibat(struct thermal_zone_device *tz, int low, int high)
 		convert_ibat_to_adc_val(bat_data->dev, &thresh_value,
 				BCL_IBAT_SCALING_UA *
 				bat_data->dev->ibat_ext_range_factor);
+
 	val = (int8_t)thresh_value;
 	switch (bat_data->type) {
 	case BCL_IBAT_LVL0:
@@ -452,17 +452,13 @@ static int bcl_read_ibat(struct thermal_zone_device *tz, int *adc_value)
 			convert_adc_to_ibat_val(bat_data->dev, adc_value,
 				BCL_IBAT_CCM_SCALING_UA *
 				bat_data->dev->ibat_ext_range_factor);
-		else if (bat_data->dev->dig_major >= BCL_GEN4_MAJOR_REV
-						&& bat_data->dev->ana_major >= BCL_GEN4_ANA_MAJOR)
-			convert_adc_nu_to_mu_val(adc_value,
-				BCL_IBAT_SCALING_REV5_NA);
 		else if (bat_data->dev->dig_major >= BCL_GEN4_MAJOR_REV)
 			convert_adc_nu_to_mu_val(adc_value,
-				BCL_IBAT_COTTID_SCALING);
+				bat_data->dev->desc->ibat_scaling_factor);
 		else if (bat_data->dev->dig_major >= BCL_GEN3_MAJOR_REV)
 			convert_adc_to_ibat_val(bat_data->dev, adc_value,
 				BCL_IBAT_SCALING_REV4_UA *
-					bat_data->dev->ibat_ext_range_factor);
+				bat_data->dev->ibat_ext_range_factor);
 		else
 			convert_adc_to_ibat_val(bat_data->dev, adc_value,
 				BCL_IBAT_SCALING_UA *
@@ -1025,12 +1021,6 @@ static int bcl_version_init_and_check(struct bcl_device *bcl_perph)
 		bcl_perph->bcl_type = 0;
 	}
 
-	ret = bcl_read_register(bcl_perph, ANA_MAJOR_OFFSET, &val);
-	if (ret < 0)
-		return ret;
-
-	bcl_perph->ana_major = val;
-
 	if ((bcl_perph->bcl_monitor_type == BCL_MON_VBAT_ONLY) ||
 			(bcl_perph->bcl_monitor_type == BCL_MON_IBAT_ONLY)) {
 		ret = regmap_read(bcl_perph->regmap, ADC_CMN_BG_ADC_DVDD_SPARE1, &val);
@@ -1154,6 +1144,18 @@ static int bcl_probe(struct platform_device *pdev)
 	return 0;
 }
 
+static const struct bcl_desc pmiv010x_data = {
+	.vadc_type = true,
+	.vbat_regs = {
+		[BCLBIG_COMP_VCMP_L0_THR]		= 0x48,
+		[BCLBIG_COMP_VCMP_L1_THR]		= 0x49,
+		[BCLBIG_COMP_VCMP_L2_THR]		= 0x4A,
+	},
+	.vbat_zone_enabled = true,
+	.ibat_scaling_factor = BCL_IBAT_COTTID_SCALING,
+	.ibat_thresh_scaling_factor = BCL_IBAT_SCALING_REV4_UA,
+};
+
 static const struct bcl_desc pmih010x_data = {
 	.vadc_type = true,
 	.vbat_regs = {
@@ -1162,6 +1164,8 @@ static const struct bcl_desc pmih010x_data = {
 		[BCLBIG_COMP_VCMP_L2_THR]		= 0x4A,
 	},
 	.vbat_zone_enabled = true,
+	.ibat_scaling_factor = BCL_IBAT_SCALING_REV5_NA,
+	.ibat_thresh_scaling_factor = BCL_IBAT_THRESH_SCALING_REV5_UA,
 };
 
 static const struct bcl_desc pm8550_data = {
@@ -1176,6 +1180,7 @@ static const struct bcl_desc pm8550_data = {
 
 static const struct of_device_id bcl_match[] = {
 	{ .compatible = "qcom,bcl-v5", .data = &pmih010x_data},
+	{ .compatible = "qcom,pmiv010x-bcl-v5", .data = &pmiv010x_data},
 	{ .compatible = "qcom,pm8550-bcl-v5", .data = &pm8550_data},
 	{ }
 };
