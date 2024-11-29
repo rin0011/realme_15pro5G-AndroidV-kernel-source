@@ -2256,8 +2256,20 @@ static const struct msm_pinctrl_soc_data kera_pinctrl = {
 	.egpio_func = 11,
 };
 
+static const struct msm_pinctrl_soc_data kera_vm_pinctrl = {
+	.pins = kera_pins,
+	.npins = ARRAY_SIZE(kera_pins),
+	.functions = kera_functions,
+	.nfunctions = ARRAY_SIZE(kera_functions),
+	.groups = kera_groups,
+	.ngroups = ARRAY_SIZE(kera_groups),
+	.ngpios = 186,
+	.egpio_func = 11,
+};
+
 static const struct of_device_id kera_pinctrl_of_match[] = {
 	{ .compatible = "qcom,kera-tlmm", .data = &kera_pinctrl },
+	{ .compatible = "qcom,kera-vm-tlmm", .data = &kera_vm_pinctrl },
 	{},
 };
 
@@ -2297,3 +2309,4 @@ module_exit(kera_pinctrl_exit);
 MODULE_DESCRIPTION("QTI kera pinctrl driver");
 MODULE_LICENSE("GPL");
 MODULE_DEVICE_TABLE(of, kera_pinctrl_of_match);
+MODULE_SOFTDEP("pre: qcom_tlmm_vm_irqchip");
