@@ -1992,9 +1992,9 @@ gh_rm_mem_accept_prepare_request(gh_memparcel_handle_t handle, u8 mem_type,
        req_payload_hdr->flags = flags;
 #else
 	req_payload_hdr->flags = flags & GH_RM_MEM_ACCEPT_VALID_GH_FLAGS;
+#endif
 	req_payload_hdr->flags |= gh_rm_mem_accept_sanitize_policy(mem_type,
 						trans_type, flags, acl_desc);
-#endif
 	if (flags & GH_RM_MEM_ACCEPT_VALIDATE_LABEL)
 		req_payload_hdr->validate_label = label;
 	gh_rm_populate_mem_request(req_buf, fn_id, acl_desc, sgl_desc, map_vmid,
