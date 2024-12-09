@@ -2858,8 +2858,6 @@ static bool geni_i3c_master_supports_ccc_cmd
 	fallthrough;
 	case I3C_CCC_DEFSLVS:
 	fallthrough;
-	case I3C_CCC_ENTHDR(0):
-	fallthrough;
 	case I3C_CCC_SETDASA:
 	fallthrough;
 	case I3C_CCC_SETNEWDA:
