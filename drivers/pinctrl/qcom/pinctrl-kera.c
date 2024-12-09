@@ -940,6 +940,17 @@ static const char *const ddr_pxi1_groups[] = {
 static const char *const dp0_hot_groups[] = {
 	"gpio55",
 };
+static const char *const egpio_groups[] = {
+	"gpio28", "gpio29", "gpio30", "gpio31", "gpio138", "gpio139",
+	"gpio140", "gpio141", "gpio142", "gpio143", "gpio144", "gpio145",
+	"gpio146", "gpio147", "gpio148", "gpio149", "gpio150", "gpio151",
+	"gpio152", "gpio153", "gpio154", "gpio155", "gpio156", "gpio157",
+	"gpio158", "gpio159", "gpio160", "gpio161", "gpio162", "gpio163",
+	"gpio164", "gpio165", "gpio166", "gpio167", "gpio168", "gpio169",
+	"gpio170", "gpio171", "gpio172", "gpio173", "gpio174", "gpio175",
+	"gpio176", "gpio177", "gpio178", "gpio179", "gpio180", "gpio181",
+	"gpio182", "gpio184",
+};
 static const char *const gcc_gp1_groups[] = {
 	"gpio27", "gpio53",
 };
@@ -1642,6 +1653,7 @@ static const struct pinfunction kera_functions[] = {
 	MSM_PIN_FUNCTION(ddr_pxi0),
 	MSM_PIN_FUNCTION(ddr_pxi1),
 	MSM_PIN_FUNCTION(dp0_hot),
+	MSM_PIN_FUNCTION(egpio),
 	MSM_PIN_FUNCTION(gcc_gp1),
 	MSM_PIN_FUNCTION(gcc_gp2),
 	MSM_PIN_FUNCTION(gcc_gp3),
