@@ -170,6 +170,8 @@
 #define GCC_UFS_PHY_ICE_CORE_HW_CTL_CLK				160
 #define GCC_UFS_PHY_PHY_AUX_HW_CTL_CLK				161
 #define GCC_UFS_PHY_UNIPRO_CORE_HW_CTL_CLK			162
+#define GCC_GPU_SMMU_VOTE_CLK					163
+#define GCC_MMU_TCU_VOTE_CLK					164
 
 /* GCC power domains */
 #define GCC_PCIE_0_GDSC						0
