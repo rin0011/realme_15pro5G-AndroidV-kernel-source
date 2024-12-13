@@ -111,7 +111,7 @@ static struct clk_alpha_pll disp_cc_pll0 = {
 			},
 			.num_parents = 1,
 			.flags = CLK_GET_RATE_NOCACHE,
-			.ops = &clk_alpha_pll_lucid_ole_ops,
+			.ops = &clk_alpha_pll_crm_lucid_ole_ops,
 		},
 		.vdd_data = {
 			.vdd_class = &vdd_mm,
@@ -1006,7 +1006,7 @@ static struct clk_rcg2 disp_cc_mdss_mdp_clk_src = {
 		.parent_data = disp_cc_parent_data_11,
 		.num_parents = ARRAY_SIZE(disp_cc_parent_data_11),
 		.flags = CLK_GET_RATE_NOCACHE | CLK_SET_RATE_PARENT,
-		.ops = &clk_rcg2_ops,
+		.ops = &clk_rcg2_crmb_ops,
 	},
 	.clkr.vdd_data = {
 		.vdd_classes = disp_cc_tuna_regulators,
