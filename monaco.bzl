@@ -132,6 +132,7 @@ def define_monaco():
         "drivers/soc/qcom/qmi_helpers.ko",
         "drivers/soc/qcom/qsee_ipc_irq_bridge.ko",
         "drivers/soc/qcom/qti-pmic-lpm.ko",
+        "drivers/soc/qcom/rq_stats.ko",
         "drivers/soc/qcom/secure_buffer.ko",
         "drivers/soc/qcom/slate_events_bridge.ko",
         "drivers/soc/qcom/slate_events_bridge_rpmsg.ko",
