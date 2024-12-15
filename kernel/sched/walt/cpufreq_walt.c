@@ -270,12 +270,48 @@ static inline unsigned int get_adaptive_high_freq(struct waltgov_policy *wg_poli
 		   wg_policy->tunables->adaptive_high_freq_kernel));
 }
 
+static unsigned int get_smart_freq_limit(unsigned int freq, struct waltgov_policy *wg_policy,
+		struct waltgov_cpu *wg_driv_cpu)
+{
+	unsigned int smart_freq = FREQ_QOS_MAX_DEFAULT_VALUE;
+	unsigned int smart_reason = 0;
+	struct walt_sched_cluster *cluster = cpu_cluster(wg_policy->policy->cpu);
+	/*
+	 * if ipc is enabled, then we update freq with respect to ipc and legacy both;
+	 * if ipc is disabled and legacy is enabled then we update freq with respect to legacy only;
+	 * if both ipc and legacy are disabled we don't need to update freq with smart_freq.
+	 */
+	if (cluster->smart_freq_info->smart_freq_ipc_participation_mask) {
+		if (freq_cap[SMART_FREQ][cluster->id] > wg_policy->ipc_smart_freq) {
+			smart_freq = freq_cap[SMART_FREQ][cluster->id];
+			smart_reason = CPUFREQ_REASON_SMART_FREQ_BIT;
+		} else if (freq_cap[SMART_FREQ][cluster->id] < wg_policy->ipc_smart_freq) {
+			smart_freq = wg_policy->ipc_smart_freq;
+			smart_reason = CPUFREQ_REASON_IPC_SMART_FREQ_BIT;
+		} else {
+			smart_freq = wg_policy->ipc_smart_freq;
+			smart_reason = CPUFREQ_REASON_SMART_FREQ_BIT |
+				CPUFREQ_REASON_IPC_SMART_FREQ_BIT;
+		}
+	} else {
+		smart_freq = freq_cap[SMART_FREQ][cluster->id];
+		smart_reason = CPUFREQ_REASON_SMART_FREQ_BIT;
+	}
+
+	if (freq > smart_freq) {
+		freq = smart_freq;
+		wg_driv_cpu->reasons |= smart_reason;
+	}
+
+	return freq;
+}
+
 static unsigned int get_next_freq(struct waltgov_policy *wg_policy,
 				  unsigned long util, unsigned long max,
 				  struct waltgov_cpu *wg_cpu, u64 time)
 {
 	struct cpufreq_policy *policy = wg_policy->policy;
-	unsigned int freq, raw_freq, final_freq, smart_freq;
+	unsigned int freq, raw_freq, final_freq;
 	struct waltgov_cpu *wg_driv_cpu = &per_cpu(waltgov_cpu, wg_policy->driving_cpu);
 	struct walt_rq *wrq = &per_cpu(walt_rq, wg_policy->driving_cpu);
 	struct walt_sched_cluster *cluster = NULL;
@@ -283,7 +319,6 @@ static unsigned int get_next_freq(struct waltgov_policy *wg_policy,
 	bool thermal_isolated_now = cpus_halted_by_client(
 			wg_policy->policy->related_cpus, PAUSE_THERMAL);
 	bool reset_need_freq_update = false;
-	unsigned int smart_reason;
 
 	if (soc_feat(SOC_ENABLE_THERMAL_HALT_LOW_FREQ_BIT)) {
 		if (thermal_isolated_now) {
@@ -336,21 +371,7 @@ static unsigned int get_next_freq(struct waltgov_policy *wg_policy,
 		}
 	}
 
-	if (freq_cap[SMART_FREQ][cluster->id] > wg_policy->ipc_smart_freq) {
-		smart_freq = freq_cap[SMART_FREQ][cluster->id];
-		smart_reason = CPUFREQ_REASON_SMART_FREQ_BIT;
-	} else if (freq_cap[SMART_FREQ][cluster->id] < wg_policy->ipc_smart_freq) {
-		smart_freq = wg_policy->ipc_smart_freq;
-		smart_reason = CPUFREQ_REASON_IPC_SMART_FREQ_BIT;
-	} else {
-		smart_freq = wg_policy->ipc_smart_freq;
-		smart_reason = CPUFREQ_REASON_SMART_FREQ_BIT | CPUFREQ_REASON_IPC_SMART_FREQ_BIT;
-	}
-
-	if (freq > smart_freq) {
-		freq = smart_freq;
-		wg_driv_cpu->reasons |= smart_reason;
-	}
+	freq = get_smart_freq_limit(freq, wg_policy, wg_driv_cpu);
 
 	if (freq > freq_cap[HIGH_PERF_CAP][cluster->id]) {
 		freq = freq_cap[HIGH_PERF_CAP][cluster->id];
@@ -395,14 +416,9 @@ out:
 
 static unsigned long waltgov_get_util(struct waltgov_cpu *wg_cpu)
 {
-	struct rq *rq = cpu_rq(wg_cpu->cpu);
-	unsigned long max = arch_scale_cpu_capacity(wg_cpu->cpu);
-	unsigned long util;
-
-	wg_cpu->max = max;
+	wg_cpu->max = arch_scale_cpu_capacity(wg_cpu->cpu);
 	wg_cpu->reasons = 0;
-	util = cpu_util_freq_walt(wg_cpu->cpu, &wg_cpu->walt_load, &wg_cpu->reasons);
-	return uclamp_rq_util_with(rq, util, NULL);
+	return cpu_util_freq_walt(wg_cpu->cpu, &wg_cpu->walt_load, &wg_cpu->reasons);
 }
 
 #define NL_RATIO 75
@@ -432,6 +448,7 @@ static void waltgov_walt_adjust(struct waltgov_cpu *wg_cpu, unsigned long cpu_ut
 	bool is_hiload;
 	bool employ_ed_boost = wg_cpu->walt_load.ed_active && sysctl_ed_boost_pct;
 	unsigned long pl = wg_cpu->walt_load.pl;
+	unsigned long min_util = *util;
 
 	if (is_rtg_boost && (!cpumask_test_cpu(wg_cpu->cpu, cpu_partial_halt_mask) ||
 				!is_state1()))
@@ -463,6 +480,9 @@ static void waltgov_walt_adjust(struct waltgov_cpu *wg_cpu, unsigned long cpu_ut
 
 	if (employ_ed_boost)
 		wg_cpu->reasons |= CPUFREQ_REASON_EARLY_DET_BIT;
+
+	*util = uclamp_rq_util_with(cpu_rq(wg_cpu->cpu), *util, NULL);
+	*util = max(min_util, *util);
 }
 
 static inline unsigned long target_util(struct waltgov_policy *wg_policy,

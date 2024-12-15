@@ -4,7 +4,7 @@ arm_smmu.ko
 gic_intr_routing.ko
 iommu-logger.ko
 phy-qcom-ufs.ko
-phy-qcom-ufs-qmp-v4-pineapple.ko
+phy-qcom-ufs-qmp-v4-niobe.ko
 phy-qcom-ufs-qmp-v4-sun.ko
 phy-qcom-ufs-qrbtc-sdm845.ko
 llcc-qcom.ko
@@ -59,6 +59,7 @@ gpucc-tuna.ko
 secure_buffer.ko
 dispcc-sun.ko
 dispcc-tuna.ko
+camcc-kera.ko
 camcc-sun.ko
 camcc-tuna.ko
 evacc-sun.ko

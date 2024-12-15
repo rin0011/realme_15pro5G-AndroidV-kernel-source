@@ -1989,7 +1989,7 @@ gh_rm_mem_accept_prepare_request(gh_memparcel_handle_t handle, u8 mem_type,
 	req_payload_hdr->mem_type = mem_type;
 	req_payload_hdr->trans_type = trans_type;
 #ifdef CONFIG_GUNYAH_LEGACY
-       req_payload_hdr->flags = flags;
+	req_payload_hdr->flags = flags;
 #else
 	req_payload_hdr->flags = flags & GH_RM_MEM_ACCEPT_VALID_GH_FLAGS;
 #endif
