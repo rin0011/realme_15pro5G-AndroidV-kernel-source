@@ -5500,16 +5500,15 @@ static int haptics_detect_lra_frequency(struct haptics_chip *chip)
 		return rc;
 	}
 
-	if (chip->hw_type >= HAP525_HV) {
-		if (!chip->config.sw_cmd_freq_det)
-			val = AUTORES_EN_BIT;
+	if (!chip->config.sw_cmd_freq_det)
+		val = AUTORES_EN_BIT;
 
+	if (chip->hw_type >= HAP525_HV)
 		val |= AUTORES_EN_DLY_7_CYCLES << AUTORES_EN_DLY_SHIFT |
 			AUTORES_ERR_WINDOW_25_PERCENT;
-	} else {
-		val = AUTORES_EN_DLY_6_CYCLES << AUTORES_EN_DLY_SHIFT|
-			AUTORES_ERR_WINDOW_50_PERCENT | AUTORES_EN_BIT;
-	}
+	else
+		val |= AUTORES_EN_DLY_6_CYCLES << AUTORES_EN_DLY_SHIFT |
+			AUTORES_ERR_WINDOW_50_PERCENT;
 
 	rc = haptics_masked_write(chip, chip->cfg_addr_base,
 			HAP_CFG_AUTORES_CFG_REG, AUTORES_EN_BIT |
