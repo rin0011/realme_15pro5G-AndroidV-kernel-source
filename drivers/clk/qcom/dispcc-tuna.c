@@ -98,6 +98,16 @@ static const struct alpha_pll_config disp_cc_pll0_config = {
 	.user_ctl_hi_val = 0x00000005,
 };
 
+static struct clk_init_data disp_cc_pll0_init = {
+	.name = "disp_cc_pll0",
+	.parent_data = &(const struct clk_parent_data) {
+		.fw_name = "bi_tcxo",
+	},
+	.num_parents = 1,
+	.flags = CLK_GET_RATE_NOCACHE,
+	.ops = &clk_alpha_pll_lucid_ole_ops,
+};
+
 static struct clk_alpha_pll disp_cc_pll0 = {
 	.offset = 0x0,
 	.vco_table = lucid_ole_vco,
@@ -2248,7 +2258,7 @@ static struct gdsc disp_cc_mdss_core_gdsc = {
 		.name = "disp_cc_mdss_core_gdsc",
 	},
 	.pwrsts = PWRSTS_OFF_ON,
-	.flags = POLL_CFG_GDSCR | RETAIN_FF_ENABLE | HW_CTRL | HW_CTRL_SKIP_DIS,
+	.flags = POLL_CFG_GDSCR | RETAIN_FF_ENABLE,
 	.supply = "vdd_mm",
 };
 
@@ -2261,7 +2271,7 @@ static struct gdsc disp_cc_mdss_core_int2_gdsc = {
 		.name = "disp_cc_mdss_core_int2_gdsc",
 	},
 	.pwrsts = PWRSTS_OFF_ON,
-	.flags = POLL_CFG_GDSCR | RETAIN_FF_ENABLE | HW_CTRL | HW_CTRL_SKIP_DIS,
+	.flags = POLL_CFG_GDSCR | RETAIN_FF_ENABLE,
 	.supply = "vdd_mm",
 };
 
@@ -2417,6 +2427,8 @@ static void disp_cc_tuna_fixup_kera(struct regmap *regmap)
 	disp_cc_mdss_mdp_clk_src.clkr.vdd_data.rate_max[VDD_HIGH] = 660000000;
 
 	disp_cc_mdss_mdp_clk_src.clkr.hw.init = &disp_cc_mdss_mdp_clk_src_init;
+
+	disp_cc_pll0.clkr.hw.init = &disp_cc_pll0_init;
 }
 
 static int disp_cc_tuna_fixup(struct platform_device *pdev, struct regmap *regmap)
