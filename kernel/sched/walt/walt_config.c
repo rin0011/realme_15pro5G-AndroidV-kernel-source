@@ -213,6 +213,7 @@ void walt_config(void)
 	} else if (!strcmp(name, "TUNA")) {
 		soc_feat_set(SOC_ENABLE_SILVER_RT_SPREAD_BIT);
 		soc_feat_set(SOC_ENABLE_BOOST_TO_NEXT_CLUSTER_BIT);
+		soc_feat_set(SOC_ENABLE_FORCE_SPECIAL_PINNING);
 		soc_sched_lib_name_capacity = 2;
 		/*
 		 * Treat Golds and Primes as candidates for load sync under pipeline usecase.
