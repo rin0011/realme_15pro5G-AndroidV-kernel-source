@@ -3398,6 +3398,14 @@ static const struct qcom_reset_map gcc_kera_resets[] = {
 	[GCC_VIDEO_AXI0_CLK_ARES] = { 0x32018, 2 },
 	[GCC_VIDEO_AXI1_CLK_ARES] = { 0x32028, 2 },
 	[GCC_VIDEO_BCR] = { 0x32000 },
+	[GCC_CAMERA_HF_AXI_SLP_STG_ARES] = { 0x26018, 4 },
+	[GCC_CAMERA_SF_AXI_SLP_STG_ARES] = { 0x26028, 4 },
+	[GCC_CAMERA_HF_AXI_SEL_SLP_STG_ARES] = { 0x26018, 5 },
+	[GCC_CAMERA_SF_AXI_SEL_SLP_STG_ARES] = { 0x26028, 5 },
+	[GCC_CAMERA_HF_CLK_EN_SLP_STG] = { 0x26018, 1 },
+	[GCC_CAMERA_SF_CLK_EN_SLP_STG] = { 0x26028, 1 },
+	[GCC_CAMERA_HF_CLK_EN_SEL_SLP_STG] = { 0x26018, 2 },
+	[GCC_CAMERA_SF_CLK_EN_SEL_SLP_STG] = { 0x26028, 2 },
 };
 
 static const struct clk_rcg_dfs_data gcc_dfs_clocks[] = {
