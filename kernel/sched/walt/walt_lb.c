@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-2.0-only
 /*
  * Copyright (c) 2020-2021, The Linux Foundation. All rights reserved.
- * Copyright (c) 2022-2024, Qualcomm Innovation Center, Inc. All rights reserved.
+ * Copyright (c) 2022-2025, Qualcomm Innovation Center, Inc. All rights reserved.
  */
 
 #include <trace/hooks/sched.h>
@@ -1124,6 +1124,9 @@ static void walt_sched_newidle_balance(void *unused, struct rq *this_rq,
 	 * Also set done to 0, such that this_rq misfit status is updated by
 	 * newidle_balance()
 	 */
+	if (unlikely(walt_disabled))
+		return;
+
 	if (this_rq->ttwu_pending)
 		done = 0;
 	else
@@ -1204,6 +1207,9 @@ static void walt_find_new_ilb(void *unused, struct cpumask *nohz_idle_cpus_mask,
 		int *ilb)
 {
 	int cpu, i;
+
+	if (unlikely(walt_disabled))
+		return;
 
 	*ilb = nr_cpu_ids;
 	for (i = 0; i < num_sched_clusters - 1; i++) {
