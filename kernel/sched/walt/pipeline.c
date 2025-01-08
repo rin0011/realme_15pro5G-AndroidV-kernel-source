@@ -91,8 +91,9 @@ int remove_heavy(struct walt_task_struct *wts)
 	for (i = 0; i < MAX_NR_PIPELINE; i++) {
 		if (wts == heavy_wts[i]) {
 			wts->low_latency &= ~WALT_LOW_LATENCY_HEAVY_BIT;
+			if (wts->pipeline_cpu > -1)
+				have_heavy_list--;
 			heavy_wts[i] = NULL;
-			have_heavy_list--;
 			for (j = i; j < MAX_NR_PIPELINE - 1; j++) {
 				heavy_wts[j] = heavy_wts[j + 1];
 				heavy_wts[j + 1] = NULL;
@@ -146,18 +147,26 @@ static inline void pipeline_set_unisolation(bool set, int flag)
 	if (unisolation_state && !enable_pipeline_unisolation) {
 		unisolation_state = false;
 
-		for_each_sched_cluster(cluster) {
-			if (cpumask_intersects(&cpus_for_pipeline, &cluster->cpus) ||
-			    is_max_possible_cluster_cpu(cpumask_first(&cluster->cpus)))
-				core_ctl_set_cluster_boost(cluster->id, false);
+		if (sysctl_single_thread_pipeline) {
+			core_ctl_set_cluster_boost(max_possible_cluster_id, false);
+		} else {
+			for_each_sched_cluster(cluster) {
+				if (cpumask_intersects(&cpus_for_pipeline, &cluster->cpus) ||
+					    is_max_possible_cluster_cpu(cpumask_first(&cluster->cpus)))
+					core_ctl_set_cluster_boost(cluster->id, false);
+			}
 		}
 	} else if (!unisolation_state && enable_pipeline_unisolation) {
 		unisolation_state = true;
 
-		for_each_sched_cluster(cluster) {
-			if (cpumask_intersects(&cpus_for_pipeline, &cluster->cpus) ||
-			    is_max_possible_cluster_cpu(cpumask_first(&cluster->cpus)))
-				core_ctl_set_cluster_boost(cluster->id, true);
+		if (sysctl_single_thread_pipeline) {
+			core_ctl_set_cluster_boost(max_possible_cluster_id, true);
+		} else {
+			for_each_sched_cluster(cluster) {
+				if (cpumask_intersects(&cpus_for_pipeline, &cluster->cpus) ||
+				    is_max_possible_cluster_cpu(cpumask_first(&cluster->cpus)))
+					core_ctl_set_cluster_boost(cluster->id, true);
+			}
 		}
 	}
 }
@@ -186,6 +195,19 @@ static inline bool should_pipeline_pin_special(void)
 {
 	if (!pipeline_special_task)
 		return false;
+
+	/*
+	 * if force special pinning is enabled for a SOC:
+	 * Any special pipeline task below configured threshold will be pinned independent
+	 * of other system wide conditions.
+	 */
+	if (soc_feat(SOC_ENABLE_FORCE_SPECIAL_PINNING)) {
+	    if (pipeline_demand(heavy_wts[0]) < sysctl_pipeline_special_task_util_thres)
+		    return true;
+	    else
+		    return false;
+	}
+
 	if (!heavy_wts[MAX_NR_PIPELINE - 1])
 		return false;
 	if (pipeline_demand(heavy_wts[0]) <= sysctl_pipeline_special_task_util_thres)
@@ -238,7 +260,8 @@ bool find_heaviest_topapp(u64 window_start)
 		return false;
 	}
 
-	if (last_rearrange_ns && (window_start < (last_rearrange_ns + 100 * MSEC_TO_NSEC)))
+	if (last_rearrange_ns && (window_start < (last_rearrange_ns +
+					(u64)sysctl_pipeline_rearrange_delay_ms[0] * MSEC_TO_NSEC)))
 		return false;
 	last_rearrange_ns = window_start;
 
@@ -321,9 +344,17 @@ bool find_heaviest_topapp(u64 window_start)
 		for (j = 0; j < MAX_NR_PIPELINE; j++) {
 			if (!heavy_wts[j])
 				continue;
-			if (heavy_wts_to_drop[i] == heavy_wts[j]) {
-				reset = false;
-				break;
+
+			if (sysctl_single_thread_pipeline) {
+				if (heavy_wts_to_drop[i] == heavy_wts[0]) {
+					reset = false;
+					break;
+				}
+			} else {
+				if (heavy_wts_to_drop[i] == heavy_wts[j]) {
+					reset = false;
+					break;
+				}
 			}
 		}
 		if (reset) {
@@ -333,7 +364,7 @@ bool find_heaviest_topapp(u64 window_start)
 
 	}
 
-	if (heavy_wts[MAX_NR_PIPELINE - 1])
+	if (heavy_wts[MAX_NR_PIPELINE - 1] || (sysctl_single_thread_pipeline && heavy_wts[0]))
 		pipeline_set_unisolation(true, AUTO_PIPELINE);
 	else
 		pipeline_set_unisolation(false, AUTO_PIPELINE);
@@ -392,7 +423,7 @@ void assign_heaviest_topapp(bool found_topapp)
 
 	have_heavy_list = 0;
 	/* assign cpus and heavy status to the new heavy */
-	for (i = 0; i < MAX_NR_PIPELINE; i++) {
+	for (i = 0; i < (sysctl_single_thread_pipeline ? 1 : MAX_NR_PIPELINE); i++) {
 		wts = heavy_wts[i];
 		if (!wts)
 			continue;
@@ -450,11 +481,14 @@ static inline void swap_pipeline_with_prime_locked(struct walt_task_struct *prim
 static inline bool delay_rearrange(u64 window_start, int pipeline_type, bool force)
 {
 	static u64 last_rearrange_ns[MAX_PIPELINE_TYPES];
+	u64 next_rearrage = (sysctl_pipeline_rearrange_delay_ms[1] > 0) ?
+				((u64)sysctl_pipeline_rearrange_delay_ms[1]  * MSEC_TO_NSEC) :
+					((u64)sched_ravg_window * WINDOW_HYSTERESIS);
 
 	if (!force && last_rearrange_ns[pipeline_type] &&
-			(window_start < (last_rearrange_ns[pipeline_type] +
-			(sched_ravg_window*WINDOW_HYSTERESIS))))
+		(window_start < last_rearrange_ns[pipeline_type] + next_rearrage))
 		return true;
+
 	last_rearrange_ns[pipeline_type] = window_start;
 	return false;
 }
@@ -512,6 +546,9 @@ void rearrange_heavy(u64 window_start, bool force)
 	unsigned long flags;
 
 	if (!pipeline_in_progress())
+		return;
+
+	if (sysctl_single_thread_pipeline)
 		return;
 
 	if (num_sched_clusters < 2)
@@ -708,6 +745,9 @@ bool enable_load_sync(int cpu)
 	if (!pipeline_in_progress())
 		return false;
 
+	if (sysctl_single_thread_pipeline)
+		return false;
+
 	/*
 	 * Under manual pipeline, only load sync between the pipeline_sync_cpus, if at least one
 	 * of the CPUs userspace has allocated for pipeline tasks corresponds to the
@@ -763,4 +803,30 @@ int pipeline_fits_smaller_cpus(struct task_struct *p)
 		return 1;
 	else
 		return -1;
+}
+
+/*
+ * single thread pipeline, is to enable pipeline affinity for only one task
+ * while the other two heavy task gets benefit of MVP status and avoid
+ * pinning, this allows task to be placed on CPU based on energy evaluations.
+ */
+void walt_configure_single_thread_pipeline(unsigned int val)
+{
+	unsigned long flags;
+	int i;
+
+	raw_spin_lock_irqsave(&heavy_lock, flags);
+
+	sysctl_single_thread_pipeline = val;
+	for (i = 1; i < MAX_NR_PIPELINE; i++) {
+		struct walt_task_struct *wts = heavy_wts[i];
+		if (wts) {
+			if (wts->pipeline_cpu > -1)
+				have_heavy_list--;
+
+			wts->pipeline_cpu = -1;
+		}
+	}
+
+	raw_spin_unlock_irqrestore(&heavy_lock, flags);
 }
