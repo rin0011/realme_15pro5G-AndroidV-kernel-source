@@ -1900,7 +1900,7 @@ static struct ctl_table walt_table[] = {
 		.procname	= "mpam_part_id",
 		.data		= (int *) MPAM_PART_ID,
 		.maxlen		= sizeof(unsigned int) * 2,
-		.mode		= 0644,
+		.mode		= 0444,
 		.proc_handler	= sched_task_handler,
 	},
 	{
