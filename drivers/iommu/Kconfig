@@ -474,6 +474,14 @@ config ARM_SMMU_TESTBUS_DUMP
 	  sync timeout failure.
 	  Note to use this only on debug builds.
 
+config ARM_SMMU_CAPTUREBUS_DEBUGFS
+	bool "Expose capturebus control debugfs nodes"
+	depends on ARM_SMMU && QCOM_IOMMU_DEBUG
+	help
+	  Support for exposing debugfs nodes to configure capturebus for each
+	  tbu of an SMMU. This also exposes debugfs nodes to get the snapshot
+	  of capturebus.
+
 	  If unsure, say N here.
 
 config ARM_SMMU_V3
