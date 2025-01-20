@@ -91,9 +91,8 @@ int remove_heavy(struct walt_task_struct *wts)
 	for (i = 0; i < MAX_NR_PIPELINE; i++) {
 		if (wts == heavy_wts[i]) {
 			wts->low_latency &= ~WALT_LOW_LATENCY_HEAVY_BIT;
-			if (wts->pipeline_cpu > -1)
-				have_heavy_list--;
 			heavy_wts[i] = NULL;
+			have_heavy_list--;
 			for (j = i; j < MAX_NR_PIPELINE - 1; j++) {
 				heavy_wts[j] = heavy_wts[j + 1];
 				heavy_wts[j + 1] = NULL;
@@ -322,17 +321,9 @@ bool find_heaviest_topapp(u64 window_start)
 		for (j = 0; j < MAX_NR_PIPELINE; j++) {
 			if (!heavy_wts[j])
 				continue;
-
-			if (sysctl_single_thread_pipeline) {
-				if (heavy_wts_to_drop[i] == heavy_wts[0]) {
-					reset = false;
-					break;
-				}
-			} else {
-				if (heavy_wts_to_drop[i] == heavy_wts[j]) {
-					reset = false;
-					break;
-				}
+			if (heavy_wts_to_drop[i] == heavy_wts[j]) {
+				reset = false;
+				break;
 			}
 		}
 		if (reset) {
@@ -401,7 +392,7 @@ void assign_heaviest_topapp(bool found_topapp)
 
 	have_heavy_list = 0;
 	/* assign cpus and heavy status to the new heavy */
-	for (i = 0; i < (sysctl_single_thread_pipeline ? 1 : MAX_NR_PIPELINE); i++) {
+	for (i = 0; i < MAX_NR_PIPELINE; i++) {
 		wts = heavy_wts[i];
 		if (!wts)
 			continue;
@@ -521,9 +512,6 @@ void rearrange_heavy(u64 window_start, bool force)
 	unsigned long flags;
 
 	if (!pipeline_in_progress())
-		return;
-
-	if (sysctl_single_thread_pipeline)
 		return;
 
 	if (num_sched_clusters < 2)
@@ -720,9 +708,6 @@ bool enable_load_sync(int cpu)
 	if (!pipeline_in_progress())
 		return false;
 
-	if (sysctl_single_thread_pipeline)
-		return false;
-
 	/*
 	 * Under manual pipeline, only load sync between the pipeline_sync_cpus, if at least one
 	 * of the CPUs userspace has allocated for pipeline tasks corresponds to the
@@ -778,30 +763,4 @@ int pipeline_fits_smaller_cpus(struct task_struct *p)
 		return 1;
 	else
 		return -1;
-}
-
-/*
- * single thread pipeline, is to enable pipeline affinity for only one task
- * while the other two heavy task gets benefit of MVP status and avoid
- * pinning, this allows task to be placed on CPU based on energy evaluations.
- */
-void walt_configure_single_thread_pipeline(unsigned int val)
-{
-	unsigned long flags;
-	int i;
-
-	raw_spin_lock_irqsave(&heavy_lock, flags);
-
-	sysctl_single_thread_pipeline = val;
-	for (i = 1; i < MAX_NR_PIPELINE; i++) {
-		struct walt_task_struct *wts = heavy_wts[i];
-		if (wts) {
-			if (wts->pipeline_cpu > -1)
-				have_heavy_list--;
-
-			wts->pipeline_cpu = -1;
-		}
-	}
-
-	raw_spin_unlock_irqrestore(&heavy_lock, flags);
 }
