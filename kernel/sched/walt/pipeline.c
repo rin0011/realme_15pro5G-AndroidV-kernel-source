@@ -147,26 +147,18 @@ static inline void pipeline_set_unisolation(bool set, int flag)
 	if (unisolation_state && !enable_pipeline_unisolation) {
 		unisolation_state = false;
 
-		if (sysctl_single_thread_pipeline) {
-			core_ctl_set_cluster_boost(max_possible_cluster_id, false);
-		} else {
-			for_each_sched_cluster(cluster) {
-				if (cpumask_intersects(&cpus_for_pipeline, &cluster->cpus) ||
-					    is_max_possible_cluster_cpu(cpumask_first(&cluster->cpus)))
-					core_ctl_set_cluster_boost(cluster->id, false);
-			}
+		for_each_sched_cluster(cluster) {
+			if (cpumask_intersects(&cpus_for_pipeline, &cluster->cpus) ||
+			    is_max_possible_cluster_cpu(cpumask_first(&cluster->cpus)))
+				core_ctl_set_cluster_boost(cluster->id, false);
 		}
 	} else if (!unisolation_state && enable_pipeline_unisolation) {
 		unisolation_state = true;
 
-		if (sysctl_single_thread_pipeline) {
-			core_ctl_set_cluster_boost(max_possible_cluster_id, true);
-		} else {
-			for_each_sched_cluster(cluster) {
-				if (cpumask_intersects(&cpus_for_pipeline, &cluster->cpus) ||
-				    is_max_possible_cluster_cpu(cpumask_first(&cluster->cpus)))
-					core_ctl_set_cluster_boost(cluster->id, true);
-			}
+		for_each_sched_cluster(cluster) {
+			if (cpumask_intersects(&cpus_for_pipeline, &cluster->cpus) ||
+			    is_max_possible_cluster_cpu(cpumask_first(&cluster->cpus)))
+				core_ctl_set_cluster_boost(cluster->id, true);
 		}
 	}
 }
@@ -247,8 +239,7 @@ bool find_heaviest_topapp(u64 window_start)
 		return false;
 	}
 
-	if (last_rearrange_ns && (window_start < (last_rearrange_ns +
-					(u64)sysctl_pipeline_rearrange_delay_ms[0] * MSEC_TO_NSEC)))
+	if (last_rearrange_ns && (window_start < (last_rearrange_ns + 100 * MSEC_TO_NSEC)))
 		return false;
 	last_rearrange_ns = window_start;
 
@@ -351,7 +342,7 @@ bool find_heaviest_topapp(u64 window_start)
 
 	}
 
-	if (heavy_wts[MAX_NR_PIPELINE - 1] || (sysctl_single_thread_pipeline && heavy_wts[0]))
+	if (heavy_wts[MAX_NR_PIPELINE - 1])
 		pipeline_set_unisolation(true, AUTO_PIPELINE);
 	else
 		pipeline_set_unisolation(false, AUTO_PIPELINE);
@@ -468,14 +459,11 @@ static inline void swap_pipeline_with_prime_locked(struct walt_task_struct *prim
 static inline bool delay_rearrange(u64 window_start, int pipeline_type, bool force)
 {
 	static u64 last_rearrange_ns[MAX_PIPELINE_TYPES];
-	u64 next_rearrage = (sysctl_pipeline_rearrange_delay_ms[1] > 0) ?
-				((u64)sysctl_pipeline_rearrange_delay_ms[1]  * MSEC_TO_NSEC) :
-					((u64)sched_ravg_window * WINDOW_HYSTERESIS);
 
 	if (!force && last_rearrange_ns[pipeline_type] &&
-		(window_start < last_rearrange_ns[pipeline_type] + next_rearrage))
+			(window_start < (last_rearrange_ns[pipeline_type] +
+			(sched_ravg_window*WINDOW_HYSTERESIS))))
 		return true;
-
 	last_rearrange_ns[pipeline_type] = window_start;
 	return false;
 }
