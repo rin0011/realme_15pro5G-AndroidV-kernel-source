@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-2.0-only
 /*
  * Copyright (c) 2018-2021, The Linux Foundation. All rights reserved.
- * Copyright (c) 2021-2024, Qualcomm Innovation Center, Inc. All rights reserved.
+ * Copyright (c) 2021-2025, Qualcomm Innovation Center, Inc. All rights reserved.
  */
 
 #define pr_fmt(fmt) "%s:%s " fmt, KBUILD_MODNAME, __func__
@@ -483,6 +483,7 @@ static int bcl_set_adc_value(struct bcl_device *bcl_perph,
 {
 	int ret = 0;
 	int16_t addr;
+	int thresh = temp;
 
 	if (temp <= 0) {
 		pr_err("Invalid input temp\n");
@@ -497,10 +498,12 @@ static int bcl_set_adc_value(struct bcl_device *bcl_perph,
 
 	addr = bcl_perph->desc->vbat_regs[addr_idx];
 	if ((addr_idx == BCLBIG_COMP_VCMP_L0_THR) &&
-							bcl_perph->desc->vadc_type)
-		convert_vbat_thresh_val_to_adc(bcl_perph, val);
-	else
+							bcl_perph->desc->vadc_type) {
+		convert_vbat_thresh_val_to_adc(bcl_perph, &thresh);
+		*val = thresh;
+	} else {
 		convert_vbat_to_vcmp_val(temp, val);
+	}
 
 	ret = bcl_write_register(bcl_perph, addr, *val);
 	BCL_IPC(bcl_perph, "threshold:%d mV ADC:0x%x\n", temp, *val);
