@@ -1001,14 +1001,6 @@ static const struct freq_tbl ftbl_disp_cc_mdss_mdp_clk_src_kera[] = {
 	{ }
 };
 
-static struct clk_init_data disp_cc_mdss_mdp_clk_src_init = {
-	.name = "disp_cc_mdss_mdp_clk_src",
-	.parent_data = disp_cc_parent_data_11,
-	.num_parents = ARRAY_SIZE(disp_cc_parent_data_11),
-	.flags = CLK_GET_RATE_NOCACHE | CLK_SET_RATE_PARENT,
-	.ops = &clk_rcg2_ops,
-};
-
 static struct clk_rcg2 disp_cc_mdss_mdp_clk_src = {
 	.cmd_rcgr = 0x8150,
 	.mnd_width = 0,
@@ -2415,8 +2407,6 @@ static void disp_cc_tuna_fixup_kera(struct regmap *regmap)
 
 	disp_cc_mdss_mdp_clk_src.clkr.vdd_data.rate_max[VDD_LOWER_D1] = 150000000;
 	disp_cc_mdss_mdp_clk_src.clkr.vdd_data.rate_max[VDD_HIGH] = 660000000;
-
-	disp_cc_mdss_mdp_clk_src.clkr.hw.init = &disp_cc_mdss_mdp_clk_src_init;
 }
 
 static int disp_cc_tuna_fixup(struct platform_device *pdev, struct regmap *regmap)
