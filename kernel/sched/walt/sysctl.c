@@ -54,7 +54,7 @@ unsigned int sysctl_sched_boost_on_input;
 unsigned int sysctl_sched_early_up[MAX_MARGIN_LEVELS];
 unsigned int sysctl_sched_early_down[MAX_MARGIN_LEVELS];
 
-/* sysctl nodes accesed by other files */
+/* sysctl nodes accessed by other files */
 unsigned int __read_mostly sysctl_sched_coloc_downmigrate_ns;
 unsigned int __read_mostly sysctl_sched_group_downmigrate_pct;
 unsigned int __read_mostly sysctl_sched_group_upmigrate_pct;
@@ -1900,7 +1900,7 @@ static struct ctl_table walt_table[] = {
 		.procname	= "mpam_part_id",
 		.data		= (int *) MPAM_PART_ID,
 		.maxlen		= sizeof(unsigned int) * 2,
-		.mode		= 0644,
+		.mode		= 0444,
 		.proc_handler	= sched_task_handler,
 	},
 	{
