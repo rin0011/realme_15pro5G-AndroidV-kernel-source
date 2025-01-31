@@ -165,7 +165,7 @@ def _define_kernel_build(
         outs = out_list,
         build_config = ":{}_build_config".format(target),
         dtstree = dtstree,
-        page_size = "4k",
+        page_size = "16k",
         base_kernel = base_kernel,
         kmi_symbol_list = "android/abi_gki_aarch64_qcom" if define_abi_targets else None,
         additional_kmi_symbol_lists = ["{}_all_kmi_symbol_lists".format(base_kernel)] if define_abi_targets else None,
@@ -338,7 +338,7 @@ def _define_kernel_dist(
       define_abi_targets: boolean determining if ABI targets should be defined
     """
 
-    dist_dir = get_out_dir(msm_target, variant) + "/dist"
+    dist_dir = get_out_dir(msm_target, variant) + "/dist16k"
 
     msm_dist_targets = [base_kernel]
 
@@ -429,7 +429,7 @@ def _define_uapi_library(target):
         kernel_build = ":{}".format(target),
     )
 
-def define_msm_la(
+def define_msm_16k_la(
         msm_target,
         variant,
         in_tree_module_list,
@@ -444,7 +444,6 @@ def define_msm_la(
       kmi_enforced: boolean determining if the KMI contract should be enforced
       boot_image_header_version: boot image header version (for `boot.img`)
       base_address: edk2 base address
-      page_size: kernel page size
       super_image_size: size of super image partition
       lz4_ramdisk: whether to use an lz4-compressed ramdisk
     """
@@ -454,13 +453,13 @@ def define_msm_la(
 
     # Enforce format of "//msm-kernel:target-foo_variant-bar" (underscore is the delimeter
     # between target and variant)
-    target = msm_target.replace("_", "-") + "_" + variant.replace("_", "-")
+    target = msm_target.replace("_", "-") + "16k" + "_" + variant.replace("_", "-")
 
     if variant == "consolidate":
         base_kernel = "//common:kernel_aarch64_consolidate"
         define_abi_targets = False
     else:
-        base_kernel = "//common:kernel_aarch64"
+        base_kernel = "//common:kernel_aarch64_16k"
         define_abi_targets = True
 
     dtb_list = get_dtb_list(msm_target)
@@ -500,7 +499,7 @@ def define_msm_la(
         build_initramfs = True,
         build_vendor_boot = True if dtbo_list else False,
         dtbo_list = dtbo_list,
-        vendor_ramdisk_binaries = vendor_ramdisk_binaries,
+        vendor_ramdisk_binaries = ["//prebuilts/qcom_boot_artifacts:vendor-standalone-ramdisk.cpio"],
         gki_ramdisk_prebuilt_binary = gki_ramdisk_prebuilt_binary,
         boot_image_opts = boot_image_opts,
         boot_image_outs = None if dtb_list else ["boot.img", "init_boot.img"],
@@ -518,8 +517,13 @@ def define_msm_la(
 
     _define_uapi_library(target)
 
-    define_abl_dist(target, msm_target, variant)
+    native.alias(
+        name = "{}_abl".format(target),
+        actual = "{}_abl".format(msm_target.replace("_", "-") + "_" + variant.replace("_", "-")),
+    )
 
-    define_dtc_dist(target, msm_target, variant)
+    native.alias(
+        name = "{}_abl_dist".format(target),
+        actual = "{}_abl_dist".format(msm_target.replace("_", "-") + "_" + variant.replace("_", "-")),
+    )
 
-    define_extras(target)
