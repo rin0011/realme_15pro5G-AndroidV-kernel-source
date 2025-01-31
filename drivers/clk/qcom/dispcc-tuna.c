@@ -98,16 +98,6 @@ static const struct alpha_pll_config disp_cc_pll0_config = {
 	.user_ctl_hi_val = 0x00000005,
 };
 
-static struct clk_init_data disp_cc_pll0_init = {
-	.name = "disp_cc_pll0",
-	.parent_data = &(const struct clk_parent_data) {
-		.fw_name = "bi_tcxo",
-	},
-	.num_parents = 1,
-	.flags = CLK_GET_RATE_NOCACHE,
-	.ops = &clk_alpha_pll_lucid_ole_ops,
-};
-
 static struct clk_alpha_pll disp_cc_pll0 = {
 	.offset = 0x0,
 	.vco_table = lucid_ole_vco,
@@ -2275,32 +2265,6 @@ static struct gdsc disp_cc_mdss_core_int2_gdsc = {
 	.supply = "vdd_mm",
 };
 
-static struct gdsc kera_disp_cc_mdss_core_gdsc = {
-	.gdscr = 0x9000,
-	.en_rest_wait_val = 0x2,
-	.en_few_wait_val = 0x2,
-	.clk_dis_wait_val = 0xf,
-	.pd = {
-		.name = "disp_cc_mdss_core_gdsc",
-	},
-	.pwrsts = PWRSTS_OFF_ON,
-	.flags = POLL_CFG_GDSCR | RETAIN_FF_ENABLE,
-	.supply = "vdd_mm",
-};
-
-static struct gdsc kera_disp_cc_mdss_core_int2_gdsc = {
-	.gdscr = 0xb000,
-	.en_rest_wait_val = 0x2,
-	.en_few_wait_val = 0x2,
-	.clk_dis_wait_val = 0xf,
-	.pd = {
-		.name = "disp_cc_mdss_core_int2_gdsc",
-	},
-	.pwrsts = PWRSTS_OFF_ON,
-	.flags = POLL_CFG_GDSCR | RETAIN_FF_ENABLE,
-	.supply = "vdd_mm",
-};
-
 static struct clk_regmap *disp_cc_tuna_clocks[] = {
 	[DISP_CC_ESYNC0_CLK] = &disp_cc_esync0_clk.clkr,
 	[DISP_CC_ESYNC0_CLK_SRC] = &disp_cc_esync0_clk_src.clkr,
@@ -2453,11 +2417,6 @@ static void disp_cc_tuna_fixup_kera(struct regmap *regmap)
 	disp_cc_mdss_mdp_clk_src.clkr.vdd_data.rate_max[VDD_HIGH] = 660000000;
 
 	disp_cc_mdss_mdp_clk_src.clkr.hw.init = &disp_cc_mdss_mdp_clk_src_init;
-
-	disp_cc_pll0.clkr.hw.init = &disp_cc_pll0_init;
-
-	disp_cc_tuna_gdscs[DISP_CC_MDSS_CORE_GDSC] = &kera_disp_cc_mdss_core_gdsc;
-	disp_cc_tuna_gdscs[DISP_CC_MDSS_CORE_INT2_GDSC] = &kera_disp_cc_mdss_core_int2_gdsc;
 }
 
 static int disp_cc_tuna_fixup(struct platform_device *pdev, struct regmap *regmap)
