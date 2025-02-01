@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-2.0-only
 /*
  * Copyright (c) 2018-2021, The Linux Foundation. All rights reserved.
- * Copyright (c) 2021-2024, Qualcomm Innovation Center, Inc. All rights reserved.
+ * Copyright (c) 2021-2025, Qualcomm Innovation Center, Inc. All rights reserved.
  */
 
 #define pr_fmt(fmt) "%s:%s " fmt, KBUILD_MODNAME, __func__
@@ -69,9 +69,9 @@
 #define BCL_GEN4_MAJOR_REV    5
 #define BCL_VBAT_SCALING_REV5_NV   194637  /* 64.879uV (one bit) * 3 VD */
 #define BCL_IBAT_SCALING_REV5_NA   61037
-#define BCL_IBAT_THRESH_SCALING_REV5_UA   156255 /* 610.37uA * 256 */
+#define BCL_IBAT_THRESH_SCALING_REV5_UA   156255L /* 610.37uA * 256 */
 #define BCL_VBAT_TRIP_CNT     3
-#define BCL_IBAT_COTTID_SCALING 366220
+#define BCL_IBAT_COTTID_SCALING 366220L
 
 #define BCL_TRIGGER_THRESHOLD 1
 #define MAX_PERPH_COUNT       3
@@ -241,9 +241,9 @@ static void convert_vbat_thresh_val_to_adc(struct bcl_device *bcl_perph, int *va
 }
 
 /* Common helper to convert nano unit to milli unit */
-static void convert_adc_nu_to_mu_val(unsigned int *val, unsigned int scaling_factor)
+static void convert_adc_nu_to_mu_val(int *val, int scaling_factor)
 {
-	*val = div_s64(*val * scaling_factor, 1000000);
+	*val = div_s64((s64)*val * (s64)scaling_factor, 1000000);
 }
 
 static void convert_adc_to_vbat_val(int *val)
@@ -483,6 +483,7 @@ static int bcl_set_adc_value(struct bcl_device *bcl_perph,
 {
 	int ret = 0;
 	int16_t addr;
+	int thresh = temp;
 
 	if (temp <= 0) {
 		pr_err("Invalid input temp\n");
@@ -497,10 +498,12 @@ static int bcl_set_adc_value(struct bcl_device *bcl_perph,
 
 	addr = bcl_perph->desc->vbat_regs[addr_idx];
 	if ((addr_idx == BCLBIG_COMP_VCMP_L0_THR) &&
-							bcl_perph->desc->vadc_type)
-		convert_vbat_thresh_val_to_adc(bcl_perph, val);
-	else
+							bcl_perph->desc->vadc_type) {
+		convert_vbat_thresh_val_to_adc(bcl_perph, &thresh);
+		*val = thresh;
+	} else {
 		convert_vbat_to_vcmp_val(temp, val);
+	}
 
 	ret = bcl_write_register(bcl_perph, addr, *val);
 	BCL_IPC(bcl_perph, "threshold:%d mV ADC:0x%x\n", temp, *val);
@@ -687,20 +690,20 @@ int get_bpm_stats(struct bcl_device *bcl_dev,
 
 	bcl_dev->last_bpm_read_ts = sched_clock();
 
-	bpm_stats->max_ibat = sign_extend32(bpm_stats->max_ibat, EXTEND_BIT);
-	convert_adc_nu_to_mu_val((unsigned int *)&bpm_stats->max_ibat,
+	bpm_stats->max_ibat = sign_extend32(bpm_stats->max_ibat_adc, EXTEND_BIT);
+	convert_adc_nu_to_mu_val(&bpm_stats->max_ibat,
 			bcl_dev->desc->ibat_scaling_factor);
 
-	bpm_stats->sync_vbat = sign_extend32(bpm_stats->sync_vbat, EXTEND_BIT);
-	convert_adc_nu_to_mu_val((unsigned int *)&bpm_stats->sync_vbat,
+	bpm_stats->sync_vbat = sign_extend32(bpm_stats->sync_vbat_adc, EXTEND_BIT);
+	convert_adc_nu_to_mu_val(&bpm_stats->sync_vbat,
 			BCL_VBAT_SCALING_REV5_NV);
 
-	bpm_stats->min_vbat = sign_extend32(bpm_stats->min_vbat, EXTEND_BIT);
-	convert_adc_nu_to_mu_val((unsigned int *)&bpm_stats->min_vbat,
+	bpm_stats->min_vbat = sign_extend32(bpm_stats->min_vbat_adc, EXTEND_BIT);
+	convert_adc_nu_to_mu_val(&bpm_stats->min_vbat,
 			BCL_VBAT_SCALING_REV5_NV);
 
-	bpm_stats->sync_ibat = sign_extend32(bpm_stats->sync_ibat, EXTEND_BIT);
-	convert_adc_nu_to_mu_val((unsigned int *)&bpm_stats->sync_ibat,
+	bpm_stats->sync_ibat = sign_extend32(bpm_stats->sync_ibat_adc, EXTEND_BIT);
+	convert_adc_nu_to_mu_val(&bpm_stats->sync_ibat,
 			bcl_dev->desc->ibat_scaling_factor);
 
 	mutex_unlock(&bcl_dev->stats_lock);
