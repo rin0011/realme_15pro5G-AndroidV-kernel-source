@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-2.0-only
 /*
  * Copyright (c) 2013-2022, Linux Foundation. All rights reserved.
- * Copyright (c) 2024 Qualcomm Innovation Center, Inc. All rights reserved.
+ * Copyright (c) 2024-2025 Qualcomm Innovation Center, Inc. All rights reserved.
  */
 
 #include <linux/acpi.h>
@@ -1855,7 +1855,7 @@ static void ufs_qcom_set_esi_affinity_hint(struct ufs_hba *hba)
 		mask = get_cpu_mask(host->esi_affinity_mask[i]);
 		if (!cpumask_subset(mask, cpu_possible_mask)) {
 			dev_err(hba->dev, "Invalid esi-cpu affinity mask passed, using default\n");
-			mask = get_cpu_mask(UFS_QCOM_ESI_AFFINITY_MASK);
+			mask = cpu_possible_mask;
 		}
 
 		irq_modify_status(desc->irq, clear, set);
@@ -3229,12 +3229,12 @@ static int ufs_qcom_first_partial_cpu(struct ufs_qcom_host *host)
  */
 static void ufs_qcom_update_esi_affinity_mask(struct ufs_qcom_host *host, int num_cqs)
 {
+	cpumask_t localclustermask[MAX_NUM_CLUSTERS];
 	int cid = -1;
 	int  first_hole_index = -1;
 	int i, j, pos = 0;
 	int last_cpu = -1;
 	int qultivate_cid = -1;
-	cpumask_t localclustermask[3];
 	u32 cpu;
 
 	first_hole_index = ufs_qcom_first_partial_cpu(host);
@@ -3397,6 +3397,8 @@ static void ufs_qcom_parse_irq_affinity(struct ufs_hba *hba)
 		if (ufs_qcom_partial_cpu_found(host))
 			ufs_qcom_update_esi_affinity_mask(host, num_cqs);
 
+		/* Ensure the esi-mask only includes possible CPUs. */
+		cpumask_and(&host->esi_mask, &host->esi_mask, cpu_possible_mask);
 	}
 }
 
