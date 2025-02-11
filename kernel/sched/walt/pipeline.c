@@ -78,15 +78,17 @@ out:
 	return ret;
 }
 
-int remove_heavy(struct walt_task_struct *wts)
+void remove_heavy(struct walt_task_struct *wts)
 {
-	int i, j, ret = 0;
+	int i, j;
 	unsigned long flags;
 
 	if (unlikely(walt_disabled))
-		return -EAGAIN;
+		return;
 
 	raw_spin_lock_irqsave(&heavy_lock, flags);
+	if (!(wts->low_latency & WALT_LOW_LATENCY_HEAVY_BIT))
+		goto out;
 
 	for (i = 0; i < MAX_NR_PIPELINE; i++) {
 		if (wts == heavy_wts[i]) {
@@ -103,7 +105,6 @@ int remove_heavy(struct walt_task_struct *wts)
 	}
 out:
 	raw_spin_unlock_irqrestore(&heavy_lock, flags);
-	return ret;
 }
 
 void remove_special_task(void)
@@ -489,13 +490,10 @@ static inline void swap_pipeline_with_prime_locked(struct walt_task_struct *prim
 	}
 }
 
-#define WINDOW_HYSTERESIS 4
 static inline bool delay_rearrange(u64 window_start, int pipeline_type, bool force)
 {
 	static u64 last_rearrange_ns[MAX_PIPELINE_TYPES];
-	u64 next_rearrange = (sysctl_pipeline_rearrange_delay_ms[1] > 0) ?
-				((u64)sysctl_pipeline_rearrange_delay_ms[1]  * MSEC_TO_NSEC) :
-					((u64)sched_ravg_window * WINDOW_HYSTERESIS);
+	u64 next_rearrange = (u64)sysctl_pipeline_rearrange_delay_ms[1] * (u64)sched_ravg_window;
 
 	if (!force && last_rearrange_ns[pipeline_type] &&
 		(window_start < last_rearrange_ns[pipeline_type] + next_rearrange))
