@@ -339,6 +339,7 @@ void post_update_cleanups(struct waltgov_policy *wg_policy)
 		wg_cpu->rtg_boost_flag = false;
 		wg_cpu->hispeed_flag = false;
 		wg_cpu->conservative_pl_flag = false;
+		wg_cpu->reasons = 0;
 	}
 
 	wg_policy->rtg_boost_flag = false;
@@ -396,7 +397,7 @@ static unsigned int get_next_freq(struct waltgov_policy *wg_policy,
 			mod_freq = wg_policy->tunables->rtg_boost_freq;
 			if (mod_freq > mod_adap_freq && j_wg_cpu->rtg_boost_flag == true) {
 				mod_adap_freq = mod_freq;
-				wg_driv_cpu->cpu = j_wg_cpu->cpu;
+				wg_driv_cpu = j_wg_cpu;
 				wg_driv_cpu->reasons |= CPUFREQ_REASON_RTG_BOOST_BIT;
 				break;
 			}
@@ -410,7 +411,7 @@ static unsigned int get_next_freq(struct waltgov_policy *wg_policy,
 			mod_freq = wg_policy->tunables->hispeed_freq;
 			if (mod_freq > mod_adap_freq && j_wg_cpu->hispeed_flag == true) {
 				mod_adap_freq = mod_freq;
-				wg_driv_cpu->cpu = j_wg_cpu->cpu;
+				wg_driv_cpu = j_wg_cpu;
 				wg_driv_cpu->reasons |= CPUFREQ_REASON_HISPEED_BIT;
 				break;
 			}
@@ -427,7 +428,7 @@ static unsigned int get_next_freq(struct waltgov_policy *wg_policy,
 			if (mod_freq > mod_adap_freq &&
 					j_wg_cpu->conservative_pl_flag == true) {
 				mod_adap_freq = mod_freq;
-				wg_driv_cpu->cpu = j_wg_cpu->cpu;
+				wg_driv_cpu = j_wg_cpu;
 				wg_driv_cpu->reasons |= CPUFREQ_REASON_PL_BIT;
 				break;
 			}
@@ -503,12 +504,6 @@ out:
 	post_update_cleanups(wg_policy);
 
 	return final_freq;
-}
-
-static unsigned long waltgov_get_util(struct waltgov_cpu *wg_cpu)
-{
-	wg_cpu->reasons = 0;
-	return cpu_util_freq_walt(wg_cpu->cpu, &wg_cpu->walt_load, &wg_cpu->reasons);
 }
 
 #define NL_RATIO 75
@@ -658,7 +653,7 @@ static void waltgov_update_freq(struct waltgov_callback *cb, u64 time,
 	if (!wg_policy->tunables->pl && flags & WALT_CPUFREQ_PL_BIT)
 		return;
 
-	wg_cpu->util = waltgov_get_util(wg_cpu);
+	wg_cpu->util = cpu_util_freq_walt(wg_cpu->cpu, &wg_cpu->walt_load, &wg_cpu->reasons);
 	wg_cpu->flags = flags;
 	raw_spin_lock(&wg_policy->update_lock);
 
