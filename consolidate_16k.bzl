@@ -8,7 +8,7 @@ load(
 load("//build/kernel/kleaf:constants.bzl", "aarch64_outs")
 load(":modules.bzl", "get_gki_modules_list", "get_kunit_modules_list")
 
-rule_base = "kernel_aarch64_consolidate"
+rule_base = "kernel_aarch64_consolidate_16k"
 
 def _gen_config_without_source_lines(build_config, target):
     rule_name = "{}.{}".format(target, build_config)
@@ -22,7 +22,7 @@ def _gen_config_without_source_lines(build_config, target):
 
     return ":" + rule_name
 
-def define_consolidate():
+def define_consolidate_16k():
     kernel_build_config(
         name = rule_base + "_build_config",
         srcs = [
@@ -49,7 +49,7 @@ def define_consolidate():
             "Image.lz4",
             "Image.gz",
         ],
-        page_size = "4k",
+        page_size = "16k",
         module_implicit_outs = get_gki_modules_list("arm64") + get_kunit_modules_list("arm64"),
         build_config = rule_base + "_build_config",
         trim_nonlisted_kmi = False,
