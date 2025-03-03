@@ -1,3 +1,13 @@
+load(
+    "//build:msm_kernel_extensions.bzl",
+    "define_extras",
+    "get_16K_vendor_ramdisk_binaries",
+    "get_build_config_fragments",
+    "get_dtb_list",
+    "get_dtbo_list",
+    "get_dtstree",
+    "get_gki_ramdisk_prebuilt_binary",
+)
 load("//build/bazel_common_rules/dist:dist.bzl", "copy_to_dist_dir")
 load(
     "//build/kernel/kleaf:kernel.bzl",
@@ -13,21 +23,11 @@ load(
     "super_image",
     "unsparsed_image",
 )
-load(
-    "//build:msm_kernel_extensions.bzl",
-    "define_extras",
-    "get_build_config_fragments",
-    "get_dtb_list",
-    "get_dtbo_list",
-    "get_dtstree",
-    "get_gki_ramdisk_prebuilt_binary",
-    "get_vendor_ramdisk_binaries",
-)
-load(":msm_common.bzl", "define_top_level_config", "gen_config_without_source_lines", "get_out_dir")
-load(":msm_dtc.bzl", "define_dtc_dist")
-load(":msm_abl.bzl", "define_abl_dist")
 load(":avb_boot_img.bzl", "avb_sign_boot_image")
 load(":image_opts.bzl", "boot_image_opts")
+load(":msm_abl.bzl", "define_abl_dist")
+load(":msm_common.bzl", "define_top_level_config", "gen_config_without_source_lines", "get_out_dir")
+load(":msm_dtc.bzl", "define_dtc_dist")
 load(":target_variants.bzl", "la_variants")
 
 def _define_build_config(
@@ -465,7 +465,7 @@ def define_msm_16k_la(
     dtb_list = get_dtb_list(msm_target)
     dtbo_list = get_dtbo_list(msm_target)
     dtstree = get_dtstree(msm_target)
-    vendor_ramdisk_binaries = get_vendor_ramdisk_binaries(target)
+    vendor_ramdisk_binaries = get_16K_vendor_ramdisk_binaries(target)
     gki_ramdisk_prebuilt_binary = get_gki_ramdisk_prebuilt_binary()
     build_config_fragments = get_build_config_fragments(msm_target)
 
@@ -499,7 +499,7 @@ def define_msm_16k_la(
         build_initramfs = True,
         build_vendor_boot = True if dtbo_list else False,
         dtbo_list = dtbo_list,
-        vendor_ramdisk_binaries = ["//prebuilts/qcom_boot_artifacts:vendor-standalone-ramdisk.cpio"],
+        vendor_ramdisk_binaries = vendor_ramdisk_binaries,
         gki_ramdisk_prebuilt_binary = gki_ramdisk_prebuilt_binary,
         boot_image_opts = boot_image_opts,
         boot_image_outs = None if dtb_list else ["boot.img", "init_boot.img"],
@@ -526,4 +526,3 @@ def define_msm_16k_la(
         name = "{}_abl_dist".format(target),
         actual = "{}_abl_dist".format(msm_target.replace("_", "-") + "_" + variant.replace("_", "-")),
     )
-
