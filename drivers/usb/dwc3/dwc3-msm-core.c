@@ -122,6 +122,11 @@
 
 #define EXTRA_INP_SS_DISABLE	BIT(5)
 
+#ifdef OPLUS_FEATURE_CHG_BASIC
+#define USB3_PRI_LINK_REGS_LLUCTL(n)	(0xd024 + ((n) * 0x80))
+#define FORCE_GEN1_MASK			BIT(10)
+#endif
+
 /* QSCRATCH_GENERAL_CFG register bit offset */
 #define PIPE_UTMI_CLK_SEL	BIT(0)
 #define PIPE3_PHYSTATUS_SW	BIT(3)
@@ -2436,6 +2441,30 @@ static void gsi_configure_ep(struct usb_ep *ep, struct usb_gsi_request *request)
 		dwc3_msm_write_reg(mdwc->base, DWC3_DALEPENA, reg);
 	}
 
+	/* Transfer resource already allocated for EP */
+	if (dep->flags & DWC3_EP_RESOURCE_ALLOCATED)
+		return;
+
+	/*
+	* Issue set xfer resource here, as DWC3 gadget modified the sequence
+	* of commands done during dwc3_gadget_start_config(). Previously,
+	* when dwc3_gadget_start_config() was called, the set xfer resource
+	* command was issued for every EP.
+	* commit b311048c174d("usb: dwc3: gadget: Rewrite endpoint
+	* allocation flow"
+	*
+	* The commit adjusts the sequence to issue set xfer resource on every
+	* ep enable call instead. Add this operation to the GSI ep enable call.
+	*/
+
+	memset(&params, 0x00, sizeof(params));
+
+	params.param0 = DWC3_DEPXFERCFG_NUM_XFER_RES(1);
+
+	dwc3_core_send_gadget_ep_cmd(dep, DWC3_DEPCMD_SETTRANSFRESOURCE,
+			&params);
+
+	dep->flags |= DWC3_EP_RESOURCE_ALLOCATED;
 }
 
 /**
@@ -5071,6 +5100,10 @@ static int dwc3_msm_set_role(struct dwc3_msm *mdwc, enum usb_role role)
 
 	dbg_log_string("cur_role:%s new_role:%s refcnt:%d\n", dwc3_msm_usb_role_string(cur_role),
 				dwc3_msm_usb_role_string(role), mdwc->refcnt_dp_usb);
+#ifdef OPLUS_FEATURE_CHG_BASIC
+	dev_err(mdwc->dev, "cur_role:%s new_role:%s refcnt:%d\n", dwc3_msm_usb_role_string(cur_role),
+				dwc3_msm_usb_role_string(role), mdwc->refcnt_dp_usb);
+#endif
 
 	/*
 	 * For boot up without USB cable connected case, don't check
@@ -5123,7 +5156,27 @@ static int dwc3_msm_set_role(struct dwc3_msm *mdwc, enum usb_role role)
 static int dwc3_msm_usb_role_switch_set_role(struct usb_role_switch *sw, enum usb_role role)
 {
 	struct dwc3_msm *mdwc = usb_role_switch_get_drvdata(sw);
+#ifdef OPLUS_FEATURE_CHG_BASIC
+	enum usb_role cur_role = dwc3_msm_get_role(mdwc);
+	ktime_t start;
+	ktime_t end;
+	unsigned int timeout = 100;
+	s64 ms;
 
+	if(((cur_role == USB_ROLE_NONE) && (role == USB_ROLE_HOST)) ||
+	   ((cur_role == USB_ROLE_NONE) && (role == USB_ROLE_DEVICE))) {
+		start = ktime_get();
+	}
+	if(((cur_role == USB_ROLE_DEVICE) && (role == USB_ROLE_HOST)) ||
+	  ((cur_role == USB_ROLE_HOST) && (role == USB_ROLE_DEVICE))) {
+		end = ktime_get();
+		ms = ktime_to_ms(ktime_sub(end, start));
+		if (ms <= (s64)timeout) {
+			printk(KERN_ERR"cur_role:%s new_role:%s, ignore the dr swap within %dms\n", dwc3_msm_usb_role_string(cur_role), dwc3_msm_usb_role_string(role), timeout);
+			return 0;
+		}
+	}
+#endif
 	return dwc3_msm_set_role(mdwc, role);
 }
 
@@ -6830,6 +6883,13 @@ static int dwc3_otg_start_host(struct dwc3_msm *mdwc, int on)
 {
 	int ret = 0;
 	struct dwc3 *dwc = platform_get_drvdata(mdwc->dwc3);
+#ifdef OPLUS_FEATURE_CHG_BASIC
+	u32 val;
+#endif
+
+#ifdef OPLUS_FEATURE_CHG_BASIC
+	dev_err(mdwc->dev, "%s: turn %s host\n", __func__, on ? "on" : "off");
+#endif
 
 	if (on) {
 		dev_dbg(mdwc->dev, "%s: turn on host\n", __func__);
@@ -6917,6 +6977,17 @@ static int dwc3_otg_start_host(struct dwc3_msm *mdwc, int on)
 
 		dwc3_msm_write_reg_field(mdwc->base, DWC3_GUSB3PIPECTL(0),
 				DWC3_GUSB3PIPECTL_SUSPHY, 1);
+
+#ifdef OPLUS_FEATURE_CHG_BASIC
+		if (mdwc->max_hw_supp_speed < USB_SPEED_SUPER_PLUS){
+			/* disable host gen2 */
+			if (mdwc->ss_phy->flags & PHY_HOST_MODE){
+				dwc3_msm_write_reg_field(mdwc->base, USB3_PRI_LINK_REGS_LLUCTL(0), FORCE_GEN1_MASK, 1);
+				val = dwc3_msm_read_reg_field(mdwc->base, USB3_PRI_LINK_REGS_LLUCTL(0), FORCE_GEN1_MASK);
+				dev_info(mdwc->dev, "Turn on host: FORCE_GEN1_MASK = %d", val);
+			}
+		}
+#endif
 
 		/* Reduce the U3 exit handshake timer from 8us to approximately
 		 * 300ns to avoid lfps handshake interoperability issues
@@ -7049,6 +7120,10 @@ static int dwc3_otg_start_peripheral(struct dwc3_msm *mdwc, int on)
 	dbg_event(0xFF, "StrtGdgt gsync",
 		atomic_read(&mdwc->dev->power.usage_count));
 
+#ifdef OPLUS_FEATURE_CHG_BASIC
+	dev_err(mdwc->dev, "%s: turn %s gadget\n", __func__, on ? "on" : "off");
+#endif
+
 	if (on) {
 		dev_dbg(mdwc->dev, "%s: turn on gadget\n", __func__);
 
@@ -7157,6 +7232,19 @@ static int dwc3_otg_start_peripheral(struct dwc3_msm *mdwc, int on)
 			mdwc->force_disconnect = true;
 		}
 
+		if ((timeout == 0) && (dwc->connected)) {
+			dbg_event(0xFF, "Force Pulldown", 0);
+
+			/*
+			 * Since we are not taking the udc_lock, there is a
+			 * chance that this might race with gadget_remove driver
+			 * in case this is called in parallel to UDC getting
+			 * cleared in userspace
+			 */
+			usb_gadget_disconnect(dwc->gadget);
+			mdwc->force_disconnect = true;
+		}
+
 		/* wait for LPM, to ensure h/w is reset after stop_peripheral */
 		set_bit(WAIT_FOR_LPM, &mdwc->inputs);
 
@@ -7195,7 +7283,11 @@ static void dwc3_otg_sm_work(struct work_struct *w)
 	}
 
 	state = dwc3_drd_state_string(mdwc->drd_state);
+#ifndef OPLUS_FEATURE_CHG_BASIC
 	dev_dbg(mdwc->dev, "%s state\n", state);
+#else
+	dev_err(mdwc->dev, "%s state\n", state);
+#endif
 	dbg_event(0xFF, state, 0);
 
 	/* Check OTG state */

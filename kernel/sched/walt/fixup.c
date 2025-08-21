@@ -136,19 +136,29 @@ void account_yields(u64 wallclock)
 	struct smart_freq_cluster_info *smart_freq_info = cluster->smart_freq_info;
 	static u64 yield_counting_window_ts;
 	u64 delta = wallclock - yield_counting_window_ts;
-	unsigned int threshold_cnt = MAX_YIELD_CNT_GLOBAL_THR_DEFAULT;
-
-	if (sysctl_force_frequent_yielder ||
-	    (smart_freq_info->cluster_active_reason & (BIT(PIPELINE_60FPS_OR_LESSER_SMART_FREQ) |
-						      BIT(PIPELINE_90FPS_SMART_FREQ) |
-						      BIT(PIPELINE_120FPS_OR_GREATER_SMART_FREQ))))
-		threshold_cnt = MAX_YIELD_CNT_GLOBAL_THR_PIPELINE;
+	unsigned int target_threshold_wake = MAX_YIELD_CNT_GLOBAL_THR_DEFAULT;
+	unsigned int target_threshold_sleep = MAX_YIELD_SLEEP_CNT_GLOBAL_THR;
+	u8 continuous_window_th = MIN_CONTIGUOUS_YIELDING_WINDOW;
+	/*
+	 * use force threshold if force_frequent_yielder feature is enabled
+	 * else if system is runnign under pipeline use pipeline specific
+	 * threshold.
+	 * default trhehsold count is high to avoid inetrference with normal
+	 * operations.
+	 */
+	if (sysctl_force_frequent_yielder) {
+		target_threshold_wake = FORCE_MAX_YIELD_CNT_GLOBAL_THR_DEFAULT;
+		target_threshold_sleep = FORCE_MAX_YIELD_SLEEP_CNT_GLOBAL_THR;
+		continuous_window_th = FORCE_MIN_CONTIGUOUS_YIELDING_WINDOW;
+	} else if (smart_freq_info->cluster_active_reason &
+					(BIT(PIPELINE_60FPS_OR_LESSER_SMART_FREQ) |
+					BIT(PIPELINE_90FPS_SMART_FREQ) |
+					BIT(PIPELINE_120FPS_OR_GREATER_SMART_FREQ))) {
+		target_threshold_wake = MAX_YIELD_CNT_GLOBAL_THR_PIPELINE;
+	}
 
 	/* window boundary crossed */
 	if (delta > YIELD_WINDOW_SIZE_NSEC) {
-		unsigned int target_threshold_wake = threshold_cnt;
-		unsigned int target_threshold_sleep = MAX_YIELD_SLEEP_CNT_GLOBAL_THR;
-
 		/*
 		 * if update_window_start comes more than
 		 * YIELD_GRACE_PERIOD_NSEC after the YIELD_WINDOW_SIZE_NSEC then
@@ -156,18 +166,17 @@ void account_yields(u64 wallclock)
 		 */
 
 		if (unlikely(delta > YIELD_WINDOW_SIZE_NSEC + YIELD_GRACE_PERIOD_NSEC)) {
-			target_threshold_wake =
-				div64_u64(delta * threshold_cnt,
-					  YIELD_WINDOW_SIZE_NSEC);
-			target_threshold_sleep =
-				div64_u64(delta * MAX_YIELD_SLEEP_CNT_GLOBAL_THR,
-					  YIELD_WINDOW_SIZE_NSEC);
+			target_threshold_wake = div64_u64(delta * target_threshold_wake,
+							YIELD_WINDOW_SIZE_NSEC);
+			target_threshold_sleep = div64_u64(delta * target_threshold_sleep,
+							YIELD_WINDOW_SIZE_NSEC);
 		}
 
 		if ((total_yield_cnt >= target_threshold_wake) ||
 		    (total_sleep_cnt >= target_threshold_sleep / 2)) {
-			if (contiguous_yielding_windows < MIN_CONTIGUOUS_YIELDING_WINDOW)
+			if (contiguous_yielding_windows < continuous_window_th) {
 				contiguous_yielding_windows++;
+			}
 		} else {
 			contiguous_yielding_windows = 0;
 		}
@@ -239,7 +248,9 @@ static void walt_do_sched_yield_before(void *unused, long *skip)
 
 	if ((wts->yield_state & YIELD_CNT_MASK) >= MAX_YIELD_CNT_PER_TASK_THR) {
 		total_yield_cnt++;
-		if (contiguous_yielding_windows >= MIN_CONTIGUOUS_YIELDING_WINDOW) {
+		if (contiguous_yielding_windows >=
+			(sysctl_force_frequent_yielder ? FORCE_MIN_CONTIGUOUS_YIELDING_WINDOW :
+								MIN_CONTIGUOUS_YIELDING_WINDOW)) {
 			/*
 			 * if we are under any legacy frequency uncap other than
 			 * pipeline(i.e some load condition, ignore injecting sleep

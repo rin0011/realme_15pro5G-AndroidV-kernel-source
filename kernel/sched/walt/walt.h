@@ -21,7 +21,26 @@
 #include <linux/sched/clock.h>
 #include <trace/hooks/cgroup.h>
 
+#ifdef CONFIG_HMBIRD_SCHED
+#include <linux/sched/hmbird.h>
+#endif
+
 #define MSEC_TO_NSEC (1000 * 1000)
+
+#if IS_ENABLED(CONFIG_OPLUS_FEATURE_SCHED_ASSIST)
+#include "../../oplus_cpu/sched/sched_assist/sa_fair.h"
+#endif
+
+#if IS_ENABLED(CONFIG_OPLUS_FEATURE_FRAME_BOOST)
+#include "../kernel/oplus_cpu/sched/frame_boost/frame_group.h"
+#endif
+
+#if IS_ENABLED(CONFIG_OPLUS_FEATURE_CPU_CLOSE_LOOP)
+extern void walt_cl_update_util_ops(
+	unsigned long (*)(int cpu, unsigned long orig, bool ed_active),
+	unsigned long (*)(int cpu, unsigned long orig, bool ed_active));
+extern void walt_trig_cpufreq_update(int cpu);
+#endif
 
 #ifdef CONFIG_HZ_300
 /*
@@ -254,6 +273,10 @@ struct walt_rq {
 	u64			old_estimated_time;
 	u64			curr_runnable_sum;
 	u64			prev_runnable_sum;
+#ifdef CONFIG_HMBIRD_SCHED
+	u64			curr_runnable_sum_fixed;
+	u64			prev_runnable_sum_fixed;
+#endif
 	u64			nt_curr_runnable_sum;
 	u64			nt_prev_runnable_sum;
 	struct group_cpu_time	grp_time;
@@ -382,6 +405,11 @@ extern enum sched_boost_policy boost_policy;
 extern unsigned int sysctl_input_boost_ms;
 extern unsigned int sysctl_input_boost_freq[WALT_NR_CPUS];
 extern unsigned int sysctl_sched_boost_on_input;
+#if IS_ENABLED(CONFIG_OPLUS_FEATURE_CEILING_FREE)
+extern unsigned int sysctl_ceiling_free_enable;
+extern unsigned int sysctl_cb_ceiling_free_enable;
+extern unsigned int sysctl_omrg_ceiling_free_enable;
+#endif
 extern unsigned int sysctl_sched_user_hint;
 extern unsigned int sysctl_sched_conservative_pl;
 extern unsigned int sysctl_sched_hyst_min_coloc_ns;
@@ -612,6 +640,24 @@ static inline unsigned long capacity_curr_of(int cpu)
 	unsigned long scale_freq = arch_scale_freq_capacity(cpu);
 
 	return cap_scale(max_cap, scale_freq);
+}
+
+static inline void init_hmbird_rq_wrq_variables(void)
+{
+	unsigned int cpu;
+	struct rq *rq;
+	struct walt_rq *wrq;
+
+	for_each_present_cpu(cpu) {
+		rq = cpu_rq(cpu);
+		wrq = &per_cpu(walt_rq, cpu);
+		struct hmbird_rq *hrq = get_hmbird_rq(rq);
+
+		if (hrq) {
+			hrq->prev_runnable_sum_fixed = (u64*)&(wrq->prev_runnable_sum_fixed);
+			hrq->prev_window_size = (u32*)&(wrq->prev_window_size);
+		}
+	}
 }
 
 static inline unsigned long task_util(struct task_struct *p)
@@ -1268,6 +1314,16 @@ static inline bool is_state1(void)
 /* determine if this task should be allowed to use a partially halted cpu */
 static inline bool task_reject_partialhalt_cpu(struct task_struct *p, int cpu)
 {
+#if IS_ENABLED(CONFIG_OPLUS_FEATURE_SCHED_ASSIST)
+	if (should_ux_task_skip_cpu(p, cpu))
+		return true;
+#endif
+
+#if IS_ENABLED(CONFIG_OPLUS_FEATURE_FRAME_BOOST)
+	if (fbg_skip_migration(p, task_cpu(p), cpu))
+		return true;
+#endif
+
 	if (p->prio < MAX_RT_PRIO)
 		return false;
 
@@ -1467,6 +1523,69 @@ static inline void walt_lockdep_assert(int cond, int cpu, struct task_struct *p)
 #define walt_lockdep_assert_rq(rq, p)			\
 	walt_lockdep_assert_held(&rq->__lock, cpu_of(rq), p)
 
+#ifdef CONFIG_HMBIRD_SCHED
+#include <linux/sched/hmbird_version.h>
+struct scx_sched_gki_ops {
+	void (*newidle_balance)(struct rq *this_rq,
+  					struct rq_flags *rf, int *pulled_task, int *done, bool partial_force);
+	void (*replace_next_task_fair)(struct rq *rq, struct task_struct **p,
+			struct sched_entity **se, bool *repick, bool simple, struct task_struct *prev);
+	void (*schedule)(struct task_struct *prev, struct task_struct *next, struct rq *rq);
+	void (*enqueue_task)(struct rq *rq, struct task_struct *p, int enq_flags);
+	void (*dequeue_task)(struct rq *rq, struct task_struct *p, int deq_flags);
+	void (*select_task_rq_rt)(struct task_struct *task, int cpu, int sd_flag, int wake_flags, int *new_cpu);
+	void (*rt_find_lowest_rq)(struct task_struct *task, struct cpumask *lowest_mask, int ret, int *best_cpu);
+	void (*select_task_rq_fair)(struct task_struct *p, int *target_cpu, int wake_flags, int prev_cpu);
+	void (*scheduler_tick)(struct rq *rq);
+	void (*tick_entry)(struct rq *rq);
+	int  (*sched_lpm_disallowed_time)(int cpu, u64 *timeout);
+	void (*nohz_balancer_kick)(struct rq *rq, unsigned int *flags, int *done);
+	void (*cfs_check_preempt_wakeup)(struct rq *rq, struct task_struct *p, bool *preempt, bool *nopreempt);
+	bool (*lb_tick_bypass)(struct rq *rq);
+	bool (*account_for_runnable_bypass)(struct rq *rq, struct task_struct *p, int event);
+	void (*window_rollover_run_once)(struct rq *rq);
+	void (*do_sched_yield_before)(long *skip);
+};
+
+extern struct scx_sched_gki_ops *scx_sched_ops;
+
+#define SCX_CALL_OP(op, args...) 						\
+do {														\
+	if (scx_sched_ops && scx_sched_ops->op) {					\
+		scx_sched_ops->op(args);								\
+	}														\
+}while(0)
+
+#define SCX_CALL_OP_RET(op, args...) 						\
+({																\
+	__typeof__(scx_sched_ops->op(args)) __ret = 0;				\
+	if (scx_sched_ops && scx_sched_ops->op) 							\
+			__ret = scx_sched_ops->op(args);						\
+	__ret; 														\
+})
+
+int register_scx_sched_gki_ops(struct scx_sched_gki_ops *ops);
+
+
+extern struct hmbird_ops *hmbird_ops;
+
+#define HMBIRD_CALL_OGKI_OP(op, args...) 						\
+do {														\
+	if (hmbird_ops && hmbird_ops->op) {					\
+		hmbird_ops->op(args);								\
+	}														\
+} while(0)
+
+#define HMBIRD_CALL_OGKI_OP_RET(op, args...) 						\
+({																\
+	__typeof__(hmbird_ops->op(args)) __ret = 0;				\
+	if (hmbird_ops && hmbird_ops->op) 							\
+			__ret = hmbird_ops->op(args);						\
+	__ret; 														\
+})
+
+#endif
+
 extern bool pipeline_check(struct walt_rq *wrq);
 extern void pipeline_rearrange(struct walt_rq *wrq, bool need_assign_heavy);
 extern void walt_configure_single_thread_pipeline(unsigned int val);
@@ -1534,6 +1653,12 @@ extern bool move_storage_load(struct rq *rq);
 #define YIELD_SLEEP_TIME_USEC			250
 #define MAX_YIELD_SLEEP_CNT_GLOBAL_THR		(YIELD_WINDOW_SIZE_USEC /		\
 								YIELD_SLEEP_TIME_USEC / 2)
+
+/* force frequent yielder threshold */
+#define FORCE_MAX_YIELD_CNT_GLOBAL_THR_DEFAULT	500
+#define FORCE_MIN_CONTIGUOUS_YIELDING_WINDOW	2
+#define FORCE_MAX_YIELD_SLEEP_CNT_GLOBAL_THR	4
+
 /* yield boundary*/
 #define MIN_FRAME_YIELD_INTERVAL_NSEC		(1000ULL * NSEC_PER_USEC)
 #define YIELD_SLEEP_HEADROOM			300000ULL

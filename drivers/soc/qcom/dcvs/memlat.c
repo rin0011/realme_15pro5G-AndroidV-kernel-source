@@ -249,6 +249,10 @@ static struct memlat_dev_data		*memlat_data;
 static DEFINE_PER_CPU(struct cpu_stats *, sampling_stats);
 static DEFINE_MUTEX(memlat_lock);
 
+#if IS_ENABLED(CONFIG_OPLUS_DSU_OPT)
+static u32 dsu_freq = 0;
+#endif
+
 struct qcom_memlat_attr {
 	struct attribute		attr;
 	ssize_t (*show)(struct kobject *kobj, struct attribute *attr,
@@ -1076,6 +1080,18 @@ static void update_memlat_fp_vote(int cpu, u32 *fp_freqs)
 	local_irq_restore(flags);
 }
 
+#if IS_ENABLED(CONFIG_OPLUS_DSU_OPT)
+u32 get_dsu_freq(void)
+{
+	u32 result = 0;
+	spin_lock_nested(&memlat_data->fp_commit_lock, SINGLE_DEPTH_NESTING);
+	result = dsu_freq;
+	spin_unlock(&memlat_data->fp_commit_lock);
+	return result;
+}
+
+EXPORT_SYMBOL(get_dsu_freq);
+#endif
 /* sampling path update work */
 static void memlat_update_work(struct work_struct *work)
 {
@@ -1117,6 +1133,11 @@ static void memlat_update_work(struct work_struct *work)
 		new_freq.ib = max_freqs[grp];
 		new_freq.ab = 0;
 		new_freq.hw_type = grp;
+#if IS_ENABLED(CONFIG_OPLUS_DSU_OPT)
+		if (new_freq.hw_type == DCVS_L3) {
+			dsu_freq = new_freq.ib;
+		}
+#endif
 		ret = qcom_dcvs_update_votes(dev_name(memlat_grp->dev),
 				&new_freq, 1, memlat_grp->sampling_path_type);
 		if (ret < 0)

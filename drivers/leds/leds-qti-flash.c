@@ -588,14 +588,15 @@ static int qti_flash_config_group_symmetry(struct qti_flash_led *led,
 		return -EINVAL;
 	}
 
-	per_led_curr_ma = total_curr_ma / symmetric_leds;
+	//per_led_curr_ma = total_curr_ma / symmetric_leds;
 
-	pr_debug("mask: %#x symmetric_leds: %d total: %d per_led_curr_ma: %d\n",
-		led_mask, symmetric_leds, total_curr_ma, per_led_curr_ma);
+	/*pr_debug("mask: %#x symmetric_leds: %d total: %d per_led_curr_ma: %d\n",
+		led_mask, symmetric_leds, total_curr_ma, per_led_curr_ma);*/
 
 	for (i = 0; i < led->num_fnodes; i++) {
 		if (led_mask & BIT(led->fnode[i].id) &&
 			led->fnode[i].type == type) {
+			per_led_curr_ma = led->fnode[i].user_current_ma;
 			rc = __qti_flash_led_brightness_set(
 				&led->fnode[i].fdev.led_cdev, per_led_curr_ma);
 			if (rc < 0)

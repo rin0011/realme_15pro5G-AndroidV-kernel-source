@@ -142,3 +142,10 @@ config QTI_DYNPF_SCMI
 	  userspace and relays them to CPUCP via SCMI communication.
 	  It is intended to be used by clients familiar with modifying
 	  the DYNPF settings.
+
+
+config OPLUS_DSU_OPT
+	tristate "Enable dsu freq"
+	default n
+	help
+	this macro is used for dsu opt
